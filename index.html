@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Zona AV</title>
+<meta name="theme-color" content="#0f1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Zona AV">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+:root{--bg:#0f1117;--card:#181b23;--card2:#1f232d;--line:#2a2f3b;--txt:#e8eaf0;--mute:#8a91a3;--blue:#3b82f6;--red:#ef4444;--green:#22c55e;--gold:#eab308;--shadow:none}
+body.claro{--bg:#f4f6fa;--card:#ffffff;--card2:#f0f2f7;--line:#dfe3ec;--txt:#161a23;--mute:#667085;--blue:#2563eb;--red:#dc2626;--green:#16a34a;--gold:#b7791f;--shadow:0 1px 3px rgba(0,0,0,.06)}
+*{box-sizing:border-box}
+html{touch-action:manipulation;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.45 -apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;padding-top:env(safe-area-inset-top)}
+button,input,select,textarea{font:inherit;color:inherit}
+.app{display:flex;min-height:100vh}
+nav.side{width:210px;flex:none;background:var(--card);border-right:1px solid var(--line);padding:18px 12px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh}
+.logo{display:flex;align-items:center;gap:10px;margin:0 6px 18px}
+.logo b{background:var(--blue);color:#fff;border-radius:7px;font-size:12px;padding:5px 6px}
+.logo span{font-size:19px;font-weight:700}
+.nb{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;border:0;background:none;color:var(--mute);cursor:pointer;text-align:left;font-size:15px}
+.nb.on{background:var(--card2);color:var(--txt);font-weight:600}
+.side .foot{margin-top:auto;font-size:12px;color:var(--mute);padding:0 8px}
+main{flex:1;min-width:0;padding:22px 26px 90px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.top h1{font-size:24px;margin:0;flex:1}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:99px;background:var(--card);border:1px solid var(--line);font-size:12px;color:var(--mute)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--mute)}
+.dot.g{background:var(--green)}.dot.r{background:var(--red)}.dot.y{background:var(--gold)}
+select,input[type=text],input[type=number],input[type=date],input[type=password],textarea{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:7px 10px;outline:none}
+.btn{text-decoration:none;color:var(--txt);display:inline-block;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px}
+.btn.p{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn.d{color:var(--red)}
+.btn:disabled{opacity:.5}
+.grid{display:grid;gap:14px}
+.k6{grid-template-columns:repeat(auto-fill,minmax(165px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:var(--shadow);min-width:0}
+.card h3{margin:0 0 12px;font-size:15px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card h3 .r{margin-left:auto;display:flex;gap:6px;align-items:center;font-weight:400}
+.kpi .l{color:var(--mute);font-size:12px}
+.kpi .v{font-size:23px;font-weight:700;margin-top:4px;white-space:nowrap}
+.kpi .s{color:var(--mute);font-size:12px;margin-top:2px}
+.pos{color:var(--blue)}.neg{color:var(--red)}.mute{color:var(--mute)}
+.two{grid-template-columns:1fr 1fr}
+@media(max-width:1100px){.two{grid-template-columns:1fr}}
+table{width:100%;border-collapse:collapse}
+th{font-size:12px;color:var(--mute);font-weight:600;text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+td.n,th.n{text-align:right}
+tr:last-child td{border-bottom:0}
+.tw{overflow-x:auto}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr)) minmax(0,1.1fr);gap:5px}
+.cd{overflow:hidden}.sh{display:none}
+.cal .h{font-size:11px;color:var(--mute);text-align:center;padding-bottom:2px}
+.cd{background:var(--card2);border-radius:8px;min-height:70px;padding:5px 7px;font-size:11px;display:flex;flex-direction:column;border:1px solid transparent}
+.cd.x{opacity:.3}.cd.t{border-color:var(--blue)}
+.cd .dn{color:var(--mute)}
+.cd .dv{margin-top:auto;font-weight:700;font-size:13px}
+.cd .dp{font-size:10px;color:var(--mute)}
+.cd.wk{background:none;border:1px dashed var(--line)}
+.cd.pg{background:color-mix(in srgb,var(--blue) 14%,var(--card2))}
+.cd.ng{background:color-mix(in srgb,var(--red) 14%,var(--card2))}
+.msum{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;margin-bottom:10px}
+.msum b{font-size:15px}
+.seg{display:inline-flex;background:var(--card2);border-radius:8px;padding:3px;gap:2px}
+.seg button{border:0;background:none;padding:5px 10px;border-radius:6px;cursor:pointer;color:var(--mute);font-size:12px;font-weight:600}
+.seg button.on{background:var(--card);color:var(--txt);box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.bar{height:16px;border-radius:4px;display:inline-block;vertical-align:middle}
+.badge{font-size:11px;font-weight:700;padding:3px 8px;border-radius:99px;white-space:nowrap}
+.b-ok{background:color-mix(in srgb,var(--green) 18%,transparent);color:var(--green)}
+.b-y{background:color-mix(in srgb,var(--gold) 20%,transparent);color:var(--gold)}
+.b-r{background:color-mix(in srgb,var(--red) 18%,transparent);color:var(--red)}
+.b-m{background:var(--card2);color:var(--mute)}
+.lic{display:grid;gap:10px}
+.lc{display:grid;grid-template-columns:1.2fr 1fr .9fr .9fr 1fr 1fr;gap:10px;align-items:center;padding:12px 14px;border-radius:10px;background:var(--card2);cursor:pointer;border:1px solid transparent}
+.lc.sel{border-color:var(--blue)}
+.lc .t{font-weight:700}.lc .s{font-size:12px;color:var(--mute)}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.row{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row .tx{flex:1}.row .tx b{display:block}.row .tx span{font-size:12px;color:var(--mute)}
+.sw{width:46px;height:26px;border-radius:99px;background:var(--line);position:relative;cursor:pointer;border:0;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.15s}
+.sw.on{background:var(--blue)}.sw.on::after{left:23px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.modal .card{width:100%;max-width:440px}
+.fld{display:grid;gap:4px;margin-bottom:10px}.fld label{font-size:12px;color:var(--mute)}
+.fld input,.fld textarea{width:100%}
+.chk{display:flex;gap:12px;flex-wrap:wrap}.chk label{display:flex;gap:5px;align-items:center;font-size:13px;color:var(--txt)}
+.hm{display:grid;grid-template-columns:38px repeat(7,1fr);gap:3px;font-size:10px}
+.hm div{height:20px;border-radius:3px;display:flex;align-items:center;justify-content:center}
+.hm .lb{color:var(--mute);justify-content:flex-start}
+.toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%);background:var(--txt);color:var(--bg);padding:9px 16px;border-radius:9px;font-weight:600;z-index:60;font-size:13px}
+#login{max-width:360px;margin:10vh auto;text-align:center}
+#login .logo{justify-content:center}
+#login input{width:100%;text-align:center;font-size:20px;letter-spacing:6px;margin-bottom:8px}
+#login input.tx{letter-spacing:1px;font-size:16px}
+.empty{color:var(--mute);text-align:center;padding:18px}
+.filtros{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:14px}
+.filtros select{width:100%}
+.filtros select.on{border-color:var(--blue);color:var(--blue);font-weight:600}
+nav.bot{display:none}
+@media(max-width:820px){
+ nav.side{display:none}
+ main{padding:14px 12px 90px}
+ nav.bot{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);z-index:40;padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+ nav.bot .nb{flex:1;flex-direction:column;gap:2px;font-size:11px;padding:6px 2px;text-align:center;align-items:center}
+ nav.bot .nb i{font-style:normal;font-size:18px}
+ .top h1{font-size:20px}
+ .kpi .v{font-size:19px}
+ .cal{gap:2px}.cd{min-height:50px;padding:3px}.cd .dv{font-size:10px;letter-spacing:-.3px}.cd .dp{display:none}.cd .dn{font-size:10px}
+ .lg{display:none}.sh{display:inline}.mh{display:none}
+ .msum{gap:10px}
+ .lc{grid-template-columns:1fr 1fr}
+ .k6{grid-template-columns:1fr 1fr}
+ .filtros{grid-template-columns:1fr 1fr}
+ select,input[type=text],input[type=number],input[type=date],input[type=password],textarea{font-size:16px}  /* evita el zoom de iPhone */
+}
+</style>
+</head>
+<body>
+<div id="login" class="card" style="display:none"></div>
+
+<div class="app" id="app" style="display:none">
+  <nav class="side" id="side"></nav>
+  <main>
+    <div class="top">
+      <h1 id="titulo">Dashboard</h1>
+      <select id="selCta" onchange="S.cta=this.value;guardar();pintar()"></select>
+      <span class="pill" id="online"><span class="dot"></span>…</span>
+      <button class="btn" onclick="cargar()" title="Actualizar">⟳</button>
+    </div>
+    <div id="vista"></div>
+  </main>
+  <nav class="bot" id="bot"></nav>
+</div>
+<div id="modal"></div>
+<div id="toast" class="toast" style="display:none"></div>
+
+<script>
+// ---------------------------------------------------------------- configuracion
+const APP_VER = '2.0';
+const API = 'https://qehuvzutrbqgppfifapp.supabase.co/functions/v1/web';
+const VERS = {ESCALERA:'1.7.4', ESCANER:'1.7.4', FIBO:'0.6', REPORTE:'0.2'};   // ultimas versiones publicadas
+const TABS = [['dash','Dashboard','◧'],['est','Estadísticas','▤'],['lic','Licencias','⚿'],['aj','Ajustes','⚙']];
+
+// ---------------------------------------------------------------- estado
+let D = null;                                 // datos del servidor
+const S = Object.assign({tab:'dash', tema:'oscuro', cta:'', mes:'', per:'30', graf:'linea', f:{}, selLic:-1}, leer());
+if(!S.f || typeof S.f!=='object') S.f={};
+function leer(){ try{ return JSON.parse(localStorage.getItem('zav')||'{}'); }catch(e){ return {}; } }
+function guardar(){ try{ const o=Object.assign({},S); delete o.selLic; localStorage.setItem('zav',JSON.stringify(o)); }catch(e){} }
+function tokG(){ try{ return localStorage.getItem('zavtok')||''; }catch(e){ return S._t||''; } }
+function tokS(v){ S._t=v; try{ if(v) localStorage.setItem('zavtok',v); else localStorage.removeItem('zavtok'); }catch(e){} }
+function marca(k,v){ try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v); }catch(e){ return null; } }
+
+// ---------------------------------------------------------------- bloquear zoom (iPhone ignora user-scalable)
+document.addEventListener('gesturestart', e=>e.preventDefault());
+document.addEventListener('dblclick', e=>e.preventDefault(), {passive:false});
+let ultToque=0; document.addEventListener('touchend', e=>{ const t=Date.now(); if(t-ultToque<300 && !/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) e.preventDefault(); ultToque=t; }, {passive:false});
+
+// ---------------------------------------------------------------- utilidades
+const $ = id => document.getElementById(id);
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function $$(v,d=2){ if(v==null||isNaN(v)) return '—'; const a=Math.abs(v).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}); return (v<0?'-$':'$')+a; }
+function sg(v,d=2){ return (v>0?'+':'')+$$(v,d); }
+const cl = v => v>0?'pos':(v<0?'neg':'');
+const pct = (a,b) => b ? (a/b*100) : 0;
+function toast(t){ const e=$('toast'); e.textContent=t; e.style.display='block'; clearTimeout(e._t); e._t=setTimeout(()=>e.style.display='none',2600); }
+function ymd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function pd(s){ const m=String(s).match(/(\d{4})-(\d\d)-(\d\d)(?: (\d\d):(\d\d))?/); return m? new Date(+m[1],m[2]-1,+m[3],+(m[4]||0),+(m[5]||0)) : null; }
+function lunes(d){ const x=new Date(d.getFullYear(),d.getMonth(),d.getDate()); const w=(x.getDay()+6)%7; x.setDate(x.getDate()-w); return x; }
+const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+function tfMin(t){ const m=/^([MHDW])(\d*)$/.exec(t||''); if(!m) return 1e9; const k=+m[2]||1; return m[1]==='M'?k:m[1]==='H'?k*60:m[1]==='D'?1440*k:10080; }
+
+function tema(){
+  let t=S.tema; if(t==='sistema') t = matchMedia('(prefers-color-scheme: light)').matches ? 'claro':'oscuro';
+  document.body.classList.toggle('claro', t==='claro');
+  document.querySelector('meta[name=theme-color]').content = t==='claro' ? '#f4f6fa' : '#0f1117';
+}
+matchMedia('(prefers-color-scheme: light)').addEventListener('change', tema);
+
+async function api(a, o){
+  const r = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(Object.assign({a, t:tokG()}, o||{}))});
+  let j; try{ j = await r.json(); }catch(e){ throw 'respuesta inválida ('+r.status+')'; }
+  if(j && j.sesion===false){ tokS(''); D=null; verLogin('Tu sesión venció. Entra otra vez.'); throw 'sesión'; }
+  return j;
+}
+
+// ---------------------------------------------------------------- huella / rostro (WebAuthn)
+const b64u = {
+  dec: s => { s=s.replace(/-/g,'+').replace(/_/g,'/'); while(s.length%4) s+='='; return Uint8Array.from(atob(s), c=>c.charCodeAt(0)).buffer; },
+  enc: b => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')
+};
+const pkSoporta = () => !!(window.PublicKeyCredential && navigator.credentials);
+async function pkCrear(op){
+  const pk = Object.assign({}, op, {challenge:b64u.dec(op.challenge), user:Object.assign({}, op.user, {id:b64u.dec(op.user.id)}),
+    excludeCredentials:(op.excludeCredentials||[]).map(c=>Object.assign({}, c, {id:b64u.dec(c.id)}))});
+  const c = await navigator.credentials.create({publicKey:pk});
+  return {id:c.id, rawId:b64u.enc(c.rawId), type:c.type, authenticatorAttachment:c.authenticatorAttachment||undefined,
+    clientExtensionResults:c.getClientExtensionResults(),
+    response:{clientDataJSON:b64u.enc(c.response.clientDataJSON), attestationObject:b64u.enc(c.response.attestationObject),
+              transports:c.response.getTransports?c.response.getTransports():[]}};
+}
+async function pkUsar(op){
+  const pk = Object.assign({}, op, {challenge:b64u.dec(op.challenge), allowCredentials:(op.allowCredentials||[]).map(c=>Object.assign({}, c, {id:b64u.dec(c.id)}))});
+  const c = await navigator.credentials.get({publicKey:pk});
+  return {id:c.id, rawId:b64u.enc(c.rawId), type:c.type, authenticatorAttachment:c.authenticatorAttachment||undefined,
+    clientExtensionResults:c.getClientExtensionResults(),
+    response:{clientDataJSON:b64u.enc(c.response.clientDataJSON), authenticatorData:b64u.enc(c.response.authenticatorData),
+              signature:b64u.enc(c.response.signature), userHandle:c.response.userHandle?b64u.enc(c.response.userHandle):undefined}};
+}
+function nombreDisp(){
+  const u=navigator.userAgent;
+  return /iPhone/.test(u)?'iPhone':/iPad/.test(u)?'iPad':/Android/.test(u)?'Android':/Mac/.test(u)?'Mac':/Windows/.test(u)?'PC Windows':'Dispositivo';
+}
+
+// ---------------------------------------------------------------- entrar
+tema();
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+if(tokG()) cargar(); else verLogin();
+
+async function verLogin(msg){
+  $('app').style.display='none'; const L=$('login'); L.style.display='block';
+  L.innerHTML = `<div class="logo"><b>AV</b><span>Zona AV</span></div><p class="mute">Conectando…</p>`;
+  let ini; try{ ini = await api('inicio'); }catch(e){ L.innerHTML += `<p class="neg">Sin conexión con el servidor.</p><button class="btn" onclick="verLogin()">Reintentar</button>`; return; }
+  if(!ini.hayPin) return formCrearPin(msg);
+  const huella = pkSoporta() && ini.llaves>0;
+  L.innerHTML = `<div class="logo"><b>AV</b><span>Zona AV</span></div>
+    ${huella?`<button class="btn p" style="width:100%;padding:12px;margin-bottom:14px" onclick="entrarHuella()">Entrar con huella o rostro</button><p class="mute" style="margin:0 0 8px">o con tu PIN</p>`:`<p class="mute">Escribe tu PIN para entrar</p>`}
+    <input id="pin" type="password" inputmode="numeric" autocomplete="current-password" onkeydown="if(event.key==='Enter')entrarPin()">
+    <button class="btn ${huella?'':'p'}" style="width:100%" onclick="entrarPin()">Entrar con PIN</button>
+    <p id="lerr" class="neg" style="min-height:20px">${esc(msg||'')}</p>
+    <p style="font-size:12px"><a href="#" class="mute" onclick="formCrearPin();return false">¿Olvidaste el PIN?</a></p>`;
+  if(!huella) setTimeout(()=>$('pin')&&$('pin').focus(),50);
+}
+function formCrearPin(msg){
+  $('login').innerHTML = `<div class="logo"><b>AV</b><span>Zona AV</span></div>
+    <p class="mute">Crea tu PIN. Para autorizarlo escribe el <b>código de recuperación</b> (el secreto ZAV_ADMIN que guardaste en Supabase).</p>
+    <input id="rc" class="tx" type="password" placeholder="Código de recuperación" autocomplete="off">
+    <input id="p1" type="password" inputmode="numeric" placeholder="PIN nuevo (4 a 8 números)" class="tx">
+    <input id="p2" type="password" inputmode="numeric" placeholder="Repite el PIN" class="tx" onkeydown="if(event.key==='Enter')crearPin()">
+    <button class="btn p" style="width:100%" onclick="crearPin()">Guardar PIN y entrar</button>
+    <p id="lerr" class="neg" style="min-height:20px">${esc(msg||'')}</p>
+    <p style="font-size:12px"><a href="#" class="mute" onclick="verLogin();return false">Volver</a></p>`;
+}
+const lerr = t => { if($('lerr')) $('lerr').textContent=t; };
+async function crearPin(){
+  const p1=$('p1').value.trim(), p2=$('p2').value.trim();
+  if(!/^\d{4,8}$/.test(p1)) return lerr('El PIN debe tener de 4 a 8 números');
+  if(p1!==p2) return lerr('Los dos PIN no coinciden');
+  lerr('Guardando…');
+  try{ const r=await api('crear_pin',{clave:$('rc').value.trim(), pin:p1}); if(!r.ok) return lerr(r.msg); tokS(r.t); cargar(true); }
+  catch(e){ lerr('Error: '+e); }
+}
+async function entrarPin(){
+  lerr('Verificando…');
+  try{ const r=await api('login_pin',{pin:$('pin').value.trim()}); if(!r.ok) return lerr(r.msg); tokS(r.t); cargar(true); }
+  catch(e){ lerr('Error: '+e); }
+}
+async function entrarHuella(){
+  lerr('Esperando la huella o el rostro…');
+  try{
+    const o=await api('pk_opciones_login'); if(!o.ok) return lerr(o.msg);
+    const resp=await pkUsar(o.op);
+    const r=await api('pk_login',{resp}); if(!r.ok) return lerr(r.msg);
+    tokS(r.t); cargar();
+  }catch(e){ lerr(e&&e.name==='NotAllowedError'?'Cancelado. Prueba otra vez o usa el PIN.':'Error: '+(e&&e.message||e)); }
+}
+
+async function cargar(recien){
+  try{
+    const r = await api('datos');
+    if(!r.ok){ toast(r.msg||'Error'); return; }
+    D = r;
+    $('login').style.display='none'; $('app').style.display='flex';
+    const cs = D.cuentas.map(c=>c.cuenta);
+    if(!S.cta || cs.indexOf(S.cta)<0) S.cta = cs[0]||'';
+    $('selCta').innerHTML = cs.map(c=>{ const x=D.cuentas.find(k=>k.cuenta===c); return `<option value="${c}" ${c===S.cta?'selected':''}>${c} · ${esc(x.modo)}</option>`; }).join('') || '<option>Sin reportes</option>';
+    pintar();
+    if(recien && pkSoporta() && !marca('zavpk')) ofrecerHuella();
+  }catch(e){ if(e==='sesión') return; if(!D) verLogin('Sin conexión: '+e); else toast('Sin conexión: '+e); }
+}
+setInterval(()=>{ if(D && !document.hidden && !$('modal').innerHTML) cargar(); }, 60000);
+document.addEventListener('visibilitychange', ()=>{ if(D && !document.hidden) cargar(); });
+
+function ofrecerHuella(){
+  modal(`<h3>Entrar con huella o rostro</h3><p>¿Quieres activar la entrada con huella o rostro en este ${esc(nombreDisp())}? El PIN sigue sirviendo de respaldo.</p>
+    <div class="acts"><button class="btn" onclick="marca('zavpk','no');cerrar()">Ahora no</button><button class="btn p" onclick="cerrar();agregarHuella()">Activar</button></div>`);
+}
+async function agregarHuella(){
+  try{
+    const o=await api('pk_opciones_registro'); if(!o.ok) return toast(o.msg);
+    const resp=await pkCrear(o.op);
+    const r=await api('pk_registro',{resp, nombre:nombreDisp()}); if(!r.ok) return toast(r.msg);
+    marca('zavpk','si'); toast('Listo: ya puedes entrar con huella o rostro'); cargar();
+  }catch(e){ toast(e&&e.name==='NotAllowedError'?'Cancelado':(e&&e.name==='InvalidStateError'?'Este dispositivo ya estaba registrado':'Error: '+(e&&e.message||e))); }
+}
+
+function ir(t){ S.tab=t; S.selLic=-1; guardar(); pintar(); window.scrollTo(0,0); }
+function menu(){
+  const b = TABS.map(([k,n,i])=>`<button class="nb ${S.tab===k?'on':''}" onclick="ir('${k}')"><i>${i}</i>${n}</button>`).join('');
+  $('side').innerHTML = `<div class="logo"><b>AV</b><span>Zona AV</span></div>${b}<div class="foot">Actualizado ${esc(D.ahora.slice(11))}<br>Se refresca cada minuto<br>App v${APP_VER}</div>`;
+  $('bot').innerHTML = b;
+}
+function cta(){ return D.cuentas.find(c=>c.cuenta===S.cta) || null; }
+function escs(){ return D.escaleras.filter(e=>e[0]===S.cta); }   // [cuenta,id,indice,tf,dir,ent,lotes,abre,cierra,min,res,dd,fecha]
+
+function pintar(){
+  if(!D) return;
+  menu();
+  $('titulo').textContent = TABS.find(t=>t[0]===S.tab)[1];
+  const c = cta();
+  const on = $('online');
+  $('selCta').style.display = (S.tab==='lic'||S.tab==='aj') ? 'none':'';
+  if(!c){ on.innerHTML='<span class="dot"></span>Sin reportes'; }
+  else if(c.hace>=0 && c.hace<=12) on.innerHTML=`<span class="dot g"></span>EA conectado · hace ${c.hace} min`;
+  else on.innerHTML=`<span class="dot r"></span>Sin reporte desde ${esc(c.ultimo)}`;
+  ({dash:vDash, est:vEst, lic:vLic, aj:vAj})[S.tab]();
+}
+
+// ---------------------------------------------------------------- DASHBOARD
+function vDash(){
+  const c = cta(), E = escs();
+  if(!c){ $('vista').innerHTML='<div class="card empty">Todavía no llegan reportes. Pon el EA Reporte AV en un gráfico.</div>'; return; }
+  const hoy = pd(D.ahora), lun = ymd(lunes(hoy)), mes1 = D.ahora.slice(0,7);
+  let sem=0, mes=0, nm=0; E.forEach(e=>{ if(e[12]>=lun) sem+=e[10]; if(e[12].slice(0,7)===mes1){ mes+=e[10]; nm++; } });
+  const flot = c.equity - c.balance;
+  const bal0 = c.balance - c.plhoy;
+  const pz = D.ajustes.pausa ? `<span class="badge b-r">PAUSA REMOTA ACTIVA</span>` :
+            (D.ajustes.limite && c.plhoy <= -D.ajustes.limite ? `<span class="badge b-r">LÍMITE DIARIO ALCANZADO</span>` : '');
+  let h = pz ? `<div style="margin-bottom:12px">${pz}</div>` : '';
+  h += `<div class="grid k6">
+    ${kpi('Balance', $$(c.balance), '', esc(c.modo)+' · '+esc(c.servidor))}
+    ${kpi('Equity', $$(c.equity), '', 'Flotante <span class="'+cl(flot)+'">'+sg(flot)+'</span>')}
+    ${kpi('Hoy', sg(c.plhoy), cl(c.plhoy), pct(c.plhoy,bal0).toFixed(2)+'%'+(D.ajustes.limite?' · límite -$'+D.ajustes.limite:''))}
+    ${kpi('Esta semana', sg(sem), cl(sem), 'desde el lunes')}
+    ${kpi('Este mes', sg(mes), cl(mes), nm+' escaleras')}
+    ${kpi('Riesgo abierto', $$(c.riesgo), c.riesgo>0?'neg':'', c.nAbiertas+' escalera(s) abierta(s)')}
+  </div>`;
+  const ab = c.abiertas||[];
+  h += `<div class="grid two" style="margin-top:14px"><div class="card"><h3>Escaleras abiertas</h3>` +
+    (ab.length ? `<div class="tw"><table><tr><th>Índice</th><th>TF</th><th></th><th class="n">Ent.</th><th class="n">Flotante</th><th class="n">Peor DD</th><th class="n mh">Riesgo</th></tr>` +
+      ab.map(a=>`<tr><td>${esc(a.indice)}</td><td>${esc(a.tf||'—')}</td><td>${a.dir==='COMPRA'?'▲<span class="lg"> Compra</span>':'▼<span class="lg"> Venta</span>'}</td><td class="n">${a.entradas}</td>
+        <td class="n ${cl(a.flotante)}">${sg(a.flotante)}</td><td class="n neg">${a.dd==null?'—':$$(a.dd)}</td><td class="n mh">${$$(a.riesgo)}</td></tr>`).join('') + `</table></div>`
+      : `<div class="empty">Ninguna escalera abierta</div>`) + `</div>`;
+  const ul = E.slice().sort((a,b)=>a[8]<b[8]?1:-1).slice(0,8);
+  h += `<div class="card"><h3>Últimas cerradas</h3>` + (ul.length ? `<div class="tw"><table><tr><th>Cierre</th><th>Índice</th><th class="mh">TF</th><th class="n mh">Ent.</th><th class="n">DD</th><th class="n">Resultado</th></tr>` +
+      ul.map(e=>`<tr><td class="mute">${esc(e[8].slice(5))}</td><td>${esc(e[2])}</td><td class="mh">${esc(e[3]||'—')}</td><td class="n mh">${e[5]}</td><td class="n neg">${e[11]==null?'—':$$(e[11])}</td><td class="n ${cl(e[10])}"><b>${sg(e[10])}</b></td></tr>`).join('') + `</table></div>`
+      : `<div class="empty">Sin escaleras cerradas</div>`) + `</div></div>`;
+  h += `<div class="card" style="margin-top:14px">${calendario(E,c)}</div>`;
+  $('vista').innerHTML = h;
+}
+function kpi(l,v,c,s){ return `<div class="card kpi"><div class="l">${l}</div><div class="v ${c||''}">${v}</div><div class="s">${s||''}</div></div>`; }
+
+function calendario(E,c){
+  const hoy = pd(D.ahora);
+  if(!S.mes) S.mes = D.ahora.slice(0,7);
+  const [y,m] = S.mes.split('-').map(Number);
+  const d1 = new Date(y,m-1,1), dN = new Date(y,m,0);
+  const dia = {}; E.forEach(e=>{ const k=e[12]; dia[k]=dia[k]||{r:0,n:0}; dia[k].r+=e[10]; dia[k].n++; });
+  const after = k => E.reduce((s,e)=>s+(e[12]>=k?e[10]:0),0);
+  let mt=0,mg=0,mp=0,mn=0; Object.keys(dia).forEach(k=>{ if(k.slice(0,7)===S.mes){ mt+=dia[k].r; mn+=dia[k].n; if(dia[k].r>0)mg++; else if(dia[k].r<0)mp++; } });
+  const balIni = c.balance - after(S.mes+'-01');
+  let h = `<h3>Calendario <span class="r"><button class="btn" onclick="mover(-1)">‹</button><b style="min-width:120px;text-align:center">${MESES[m-1]} ${y}</b><button class="btn" onclick="mover(1)">›</button></span></h3>
+    <div class="msum"><span>Mes: <b class="${cl(mt)}">${sg(mt)}</b> <span class="mute">(${pct(mt,balIni).toFixed(2)}%)</span></span><span>Escaleras: <b>${mn}</b></span><span>Días ganadores: <b class="pos">${mg}</b></span><span>Días perdedores: <b class="neg">${mp}</b></span></div>
+    <div class="cal">` + ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom','Semana'].map(x=>`<div class="h">${x}</div>`).join('');
+  let d = lunes(d1);
+  while(d <= dN){
+    let ws=0, wn=0;
+    for(let i=0;i<7;i++){
+      const k=ymd(d), x=dia[k], fuera=d.getMonth()!==m-1;
+      if(x && !fuera){ ws+=x.r; wn+=x.n; }
+      const p = x ? pct(x.r, c.balance - after(k) + 0) : 0;
+      h += `<div class="cd ${fuera?'x':''} ${k===ymd(hoy)?'t':''} ${x&&!fuera?(x.r>=0?'pg':'ng'):''}"><span class="dn">${d.getDate()}${x?' · '+x.n:''}</span>` +
+           (x&&!fuera ? `<span class="dv ${cl(x.r)}"><span class="lg">${sg(x.r)}</span><span class="sh">${sg(x.r,0)}</span></span><span class="dp">${p.toFixed(2)}%</span>` : '') + `</div>`;
+      d.setDate(d.getDate()+1);
+    }
+    h += `<div class="cd wk"><span class="dn">${wn?wn+'<span class="lg"> esc.</span>':''}</span>${wn?`<span class="dv ${cl(ws)}"><span class="lg">${sg(ws)}</span><span class="sh">${sg(ws,0)}</span></span>`:''}</div>`;
+  }
+  return h + `</div>`;
+}
+function mover(k){ const [y,m]=S.mes.split('-').map(Number); const d=new Date(y,m-1+k,1); S.mes=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); guardar(); pintar(); }
+
+// ---------------------------------------------------------------- ESTADISTICAS (con filtros combinables)
+const DDN = {a:'DD menor a $20', b:'DD $20 – $40', c:'DD $40 – $60', d:'DD más de $60', x:'Sin DD medido'};
+const BLQ = ['Madrugada (00–06 h)','Mañana (06–12 h)','Tarde (12–18 h)','Noche (18–24 h)'];
+function ddB(e){ if(e[11]==null) return 'x'; const d=-e[11]; return d<20?'a':d<40?'b':d<60?'c':'d'; }
+function horaDe(e){ const d=pd(e[8]); return d?d.getHours():-1; }
+const FIL = {
+  ind:  {t:'Todos los índices',     k:e=>e[2],       n:v=>v},
+  tf:   {t:'Todas las TF',          k:e=>e[3]||'Sin TF',  n:v=>v, o:(a,b)=>tfMin(a)-tfMin(b)},
+  ent:  {t:'Todas las entradas',    k:e=>String(e[5]), n:v=>v+' entrada'+(v==='1'?'':'s'), o:(a,b)=>a-b},
+  dd:   {t:'Todo el DD',            k:ddB,           n:v=>DDN[v]},
+  dir:  {t:'Compra y venta',        k:e=>e[4],       n:v=>v==='COMPRA'?'▲ Compra':'▼ Venta'},
+  hora: {t:'Toda hora de cierre'}
+};
+function pasaHora(e,v){ const h=horaDe(e); if(v[0]==='b') return Math.floor(h/6)===+v.slice(1); return h===+v.slice(1); }
+function filtrar(sinFiltro){
+  let E = escs();
+  const hoy = pd(D.ahora);
+  if(S.per==='7'||S.per==='30'){ const d=new Date(hoy); d.setDate(d.getDate()-(+S.per)+1); const k=ymd(d); E=E.filter(e=>e[12]>=k); }
+  else if(S.per==='mes'){ const k=D.ahora.slice(0,7); E=E.filter(e=>e[12].slice(0,7)===k); }
+  Object.keys(FIL).forEach(f=>{ const v=S.f[f]; if(!v || f===sinFiltro) return;
+    E = f==='hora' ? E.filter(e=>pasaHora(e,v)) : E.filter(e=>FIL[f].k(e)===v); });
+  return E.sort((a,b)=>a[8]<b[8]?-1:1);
+}
+function seg(id,opts,val,fn){ return `<span class="seg">`+opts.map(([v,t])=>`<button class="${val===v?'on':''}" onclick="${fn}('${v}')">${t}</button>`).join('')+`</span>`; }
+function setPer(v){ S.per=v; guardar(); pintar(); }
+function setGraf(v){ S.graf=v; guardar(); pintar(); }
+function setF(f,v){ if(v) S.f[f]=v; else delete S.f[f]; guardar(); pintar(); }
+function limpiarF(){ S.f={}; guardar(); pintar(); }
+function selFiltro(f){
+  const v=S.f[f]||'';
+  let op;
+  if(f==='hora'){
+    op = `<optgroup label="Bloques">${BLQ.map((t,i)=>`<option value="b${i}" ${v==='b'+i?'selected':''}>${t}</option>`).join('')}</optgroup>` +
+         `<optgroup label="Por hora">${Array.from({length:24},(x,i)=>`<option value="h${i}" ${v==='h'+i?'selected':''}>${String(i).padStart(2,'0')}:00 – ${String(i).padStart(2,'0')}:59</option>`).join('')}</optgroup>`;
+  } else {
+    const F=FIL[f]; const base=filtrar(f);   // opciones posibles con los demas filtros puestos
+    let ks=[...new Set(base.map(F.k))]; if(v && ks.indexOf(v)<0) ks.push(v);
+    ks.sort(F.o||undefined);
+    op = ks.map(k=>`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(F.n(k))}</option>`).join('');
+  }
+  return `<select class="${v?'on':''}" onchange="setF('${f}',this.value)"><option value="">${FIL[f].t}</option>${op}</select>`;
+}
+
+function vEst(){
+  const E = filtrar();
+  const nf = Object.keys(S.f).length;
+  let h = `<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
+     ${seg('per',[['7','7 días'],['30','30 días'],['mes','Este mes'],['todo','Todo']],S.per,'setPer')}
+     ${nf?`<button class="btn" onclick="limpiarF()">Quitar filtros (${nf})</button>`:''}</div>
+     <div class="filtros">${Object.keys(FIL).map(selFiltro).join('')}</div>`;
+  if(!E.length){ $('vista').innerHTML = h+'<div class="card empty">No hay escaleras con estos filtros.</div>'; return; }
+  const g=E.filter(e=>e[10]>0), p=E.filter(e=>e[10]<=0);
+  const tot=E.reduce((s,e)=>s+e[10],0), sg_=g.reduce((s,e)=>s+e[10],0), sp=p.reduce((s,e)=>s+e[10],0);
+  const dds=E.filter(e=>e[11]!=null);
+  const ddm = dds.length ? dds.reduce((s,e)=>s+e[11],0)/dds.length : null;
+  const mx = E.reduce((a,e)=>e[10]>a[10]?e:a,E[0]), mn = E.reduce((a,e)=>e[10]<a[10]?e:a,E[0]);
+  h += `<div class="grid k6">
+    ${kpi('Resultado', sg(tot), cl(tot), E.length+' escaleras')}
+    ${kpi('Ganadas', pct(g.length,E.length).toFixed(0)+'%', '', g.length+' de '+E.length)}
+    ${kpi('Factor de beneficio', sp? (sg_/-sp).toFixed(2):'∞', '', 'ganado ÷ perdido')}
+    ${kpi('Ganancia media', $$(g.length?sg_/g.length:0), 'pos', 'pérdida media <span class="neg">'+$$(p.length?sp/p.length:0)+'</span>')}
+    ${kpi('Mejor / peor', '<span class="pos">'+sg(mx[10])+'</span>', '', 'peor <span class="neg">'+sg(mn[10])+'</span> · '+esc(mn[2]))}
+    ${kpi('DD medio', ddm==null?'—':$$(ddm), 'neg', dds.length+' con DD medido')}
+  </div>`;
+  h += `<div class="card" style="margin-top:14px"><h3>Resultado <span class="r">${seg('g',[['linea','Línea'],['area','Área'],['barras','Barras diarias']],S.graf,'setGraf')}</span></h3>${grafico(E)}</div>`;
+  h += `<div class="grid two" style="margin-top:14px">
+    <div class="card"><h3>Por índice</h3>${tabla(E,e=>e[2])}</div>
+    <div class="card"><h3>Por temporalidad</h3>${tabla(E,e=>e[3]||'Sin TF',(a,b)=>tfMin(a)-tfMin(b))}</div>
+    <div class="card"><h3>Por número de entradas</h3>${tabla(E,e=>e[5]+' entrada'+(e[5]>1?'s':''),(a,b)=>parseInt(a)-parseInt(b))}</div>
+    <div class="card"><h3>Por profundidad del DD</h3>${dds.length?tabla(dds,e=>DDN[ddB(e)],(a,b)=>ddOrd(a)-ddOrd(b)):'<div class="empty">Aún no hay escaleras con DD medido.</div>'}</div>
+    <div class="card"><h3>Dirección</h3>${tabla(E,e=>e[4]==='COMPRA'?'▲ Compra':'▼ Venta')}</div>
+    <div class="card"><h3>Hora de cierre <span class="r mute" style="font-size:12px">azul gana · rojo pierde</span></h3>${mapa(E)}</div>
+  </div>`;
+  $('vista').innerHTML = h;
+}
+function ddOrd(t){ return ['a','b','c','d','x'].indexOf(Object.keys(DDN).find(k=>DDN[k]===t)); }
+function tabla(E,key,orden){
+  const G={}; E.forEach(e=>{ const k=key(e); G[k]=G[k]||{n:0,g:0,r:0,dd:0,nd:0}; const x=G[k]; x.n++; if(e[10]>0)x.g++; x.r+=e[10]; if(e[11]!=null){x.dd+=e[11];x.nd++;} });
+  let ks = Object.keys(G); ks.sort(orden||((a,b)=>G[b].r-G[a].r));
+  const max = Math.max(...ks.map(k=>Math.abs(G[k].r)),1);
+  return `<div class="tw"><table><tr><th></th><th class="n">Esc.</th><th class="n">Ganadas</th><th class="n">DD medio</th><th class="n">Resultado</th><th style="width:30%"></th></tr>` +
+    ks.map(k=>{ const x=G[k]; return `<tr><td>${esc(k)}</td><td class="n">${x.n}</td><td class="n">${pct(x.g,x.n).toFixed(0)}%</td><td class="n neg">${x.nd?$$(x.dd/x.nd):'—'}</td>
+      <td class="n ${cl(x.r)}"><b>${sg(x.r)}</b></td><td><span class="bar" style="width:${Math.abs(x.r)/max*100}%;background:var(${x.r>=0?'--blue':'--red'})"></span></td></tr>`; }).join('') + `</table></div>`;
+}
+function mapa(E){
+  const M={}; E.forEach(e=>{ const d=pd(e[8]); if(!d)return; const k=((d.getDay()+6)%7)+'_'+Math.floor(d.getHours()/2); M[k]=(M[k]||0)+e[10]; });
+  const mx=Math.max(...Object.values(M).map(Math.abs),1);
+  let h=`<div class="hm"><div></div>`+['L','M','X','J','V','S','D'].map(x=>`<div class="lb" style="justify-content:center">${x}</div>`).join('');
+  for(let b=0;b<12;b++){ h+=`<div class="lb">${String(b*2).padStart(2,'0')}h</div>`;
+    for(let w=0;w<7;w++){ const v=M[w+'_'+b]; const a=v?0.15+0.75*Math.abs(v)/mx:0;
+      h+=`<div title="${v?sg(v):''}" style="background:${v?`color-mix(in srgb,var(${v>=0?'--blue':'--red'}) ${Math.round(a*100)}%,transparent)`:'var(--card2)'}"></div>`; } }
+  return h+`</div>`;
+}
+function grafico(E){
+  const W=900,H=240,P=46;
+  let pts;
+  if(S.graf==='barras'){
+    const d={}; E.forEach(e=>d[e[12]]=(d[e[12]]||0)+e[10]); pts=Object.keys(d).sort().map(k=>[k,d[k]]);
+  } else { let s=0; pts=E.map(e=>[e[8],s+=e[10]]); pts.unshift([E[0][7],0]); }
+  const vs=pts.map(p=>p[1]); const mx=Math.max(0,...vs), mn=Math.min(0,...vs), rg=(mx-mn)||1;
+  const Y=v=>10+(mx-v)/rg*(H-30), n=pts.length;
+  const X=i=>P+(n<=1?0:i*(W-P-10)/(n-1));
+  let g=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">`;
+  [mx,(mx+mn)/2,mn].forEach(v=>{ g+=`<line x1="${P}" x2="${W-10}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-dasharray="${v===0?'':'3 4'}"/><text x="${P-6}" y="${Y(v)+4}" text-anchor="end" font-size="11" fill="var(--mute)">${$$(v,0)}</text>`; });
+  g+=`<line x1="${P}" x2="${W-10}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--mute)" stroke-width="1"/>`;
+  if(S.graf==='barras'){
+    const bw=Math.max(3,Math.min(28,(W-P-10)/n*0.7));
+    pts.forEach((p,i)=>{ const x=P+(i+0.5)*(W-P-10)/n-bw/2, y=Math.min(Y(p[1]),Y(0)), h=Math.max(1,Math.abs(Y(p[1])-Y(0)));
+      g+=`<rect x="${x}" y="${y}" width="${bw}" height="${h}" rx="2" fill="var(${p[1]>=0?'--blue':'--red'})"><title>${p[0]}: ${sg(p[1])}</title></rect>`; });
+    const lb=[0,Math.floor(n/2),n-1].filter((v,i,a)=>a.indexOf(v)===i);
+    lb.forEach(i=>g+=`<text x="${P+(i+0.5)*(W-P-10)/n}" y="${H-2}" text-anchor="middle" font-size="11" fill="var(--mute)">${pts[i][0].slice(5)}</text>`);
+  } else {
+    const line = pts.map((p,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(p[1]).toFixed(1)).join(' ');
+    const last = vs[vs.length-1], col = last>=0?'--blue':'--red';
+    if(S.graf==='area') g+=`<path d="${line} L${X(n-1)} ${Y(0)} L${X(0)} ${Y(0)} Z" fill="var(${col})" opacity=".18"/>`;
+    g+=`<path d="${line}" fill="none" stroke="var(${col})" stroke-width="2.2" stroke-linejoin="round"/>`;
+    g+=`<circle cx="${X(n-1)}" cy="${Y(last)}" r="4" fill="var(${col})"/>`;
+    g+=`<text x="${P}" y="${H-2}" font-size="11" fill="var(--mute)">${esc(String(pts[0][0]).slice(5,10))}</text><text x="${W-10}" y="${H-2}" text-anchor="end" font-size="11" fill="var(--mute)">${esc(String(pts[n-1][0]).slice(5,10))} · ${sg(last)}</text>`;
+  }
+  return g+`</svg>`;
+}
+
+// ---------------------------------------------------------------- LICENCIAS
+function estadoLic(l){
+  if(!l.activa) return ['DESACTIVADA','b-m'];
+  if(!l.vence) return ['FECHA INVÁLIDA','b-r'];
+  const hoy=D.ahora.slice(0,10).replace(/-/g,'.');
+  if(l.vence < hoy) return ['VENCIDA','b-r'];
+  const d=pd(l.vence.replace(/\./g,'-')), h=pd(D.ahora); const dias=Math.round((d-h)/864e5);
+  return dias<=7 ? ['VENCE EN '+Math.max(0,dias)+' DÍAS','b-y'] : ['ACTIVA','b-ok'];
+}
+function verVieja(v){ const m=String(v).match(/^([A-Z]+)\s+(\S+)/); return m && VERS[m[1]] && VERS[m[1]]!==m[2]; }
+function vLic(){
+  const L = D.licencias;
+  const act = L.filter(l=>estadoLic(l)[0]==='ACTIVA').length;
+  let h = `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px"><span class="mute">${L.length} licencias · ${act} activas</span><button class="btn p" style="margin-left:auto" onclick="formLic(-1)">+ Nueva licencia</button></div>`;
+  h += `<div class="lic">` + L.map((l,i)=>{ const [t,c]=estadoLic(l); return `
+    <div class="lc ${S.selLic===i?'sel':''}" onclick="S.selLic=${S.selLic===i?-1:i};pintar()">
+      <div><div class="t">${esc(l.apodo||'—')}</div><div class="s">Cuenta ${esc(l.cuenta)}</div></div>
+      <div><div class="s">EA</div>${esc(l.ea)}</div>
+      <div><div class="s">Vence</div>${esc(l.vence||'—')}</div>
+      <div><span class="badge ${c}">${t}</span></div>
+      <div><div class="s">Último uso</div>${esc(l.uso||'—')}</div>
+      <div><div class="s">Versión</div><span class="${verVieja(l.version)?'badge b-y':''}">${esc(l.version||'—')}</span></div>
+    </div>` + (S.selLic===i ? `<div class="card" style="margin-top:-4px">
+      ${l.notas?`<div class="mute" style="margin-bottom:6px">${esc(l.notas)}</div>`:''}
+      <div class="acts">
+        <button class="btn" onclick="formLic(${i})">Editar</button>
+        <button class="btn" onclick="accLic(${i},'mas30')">+30 días</button>
+        <button class="btn" onclick="accLic(${i},'activa')">${l.activa?'Desactivar':'Activar'}</button>
+        <button class="btn" onclick="copiar(${i})">Copiar mensaje</button>
+        <button class="btn d" onclick="borrar(${i})">Eliminar</button>
+      </div>${verVieja(l.version)?`<div class="mute" style="margin-top:8px;font-size:12px">La versión en amarillo indica que usa un EA desactualizado (última ${VERS[l.version.split(' ')[0]]}).</div>`:''}</div>` : '');
+  }).join('') + `</div>`;
+  if(!L.length) h += '<div class="card empty">Sin licencias</div>';
+  $('vista').innerHTML = h;
+}
+async function accLic(i,acc,extra){
+  const l=D.licencias[i];
+  const d=Object.assign({id:l.id},extra||{});
+  if(acc==='activa') d.activa=!l.activa;
+  try{ const r=await api('licencia',{acc,d}); if(!r.ok){toast(r.msg);return;} D.licencias=r.licencias; S.selLic=-1; cerrar(); pintar();
+       toast({mas30:'Vencimiento +30 días',activa:d.activa?'Licencia activada':'Licencia desactivada',eliminar:'Licencia eliminada',editar:'Guardado'}[acc]||'Listo'); }
+  catch(e){ toast('Error: '+e); }
+}
+function borrar(i){
+  const l=D.licencias[i];
+  modal(`<h3>Eliminar licencia</h3><p>¿Eliminar la licencia de <b>${esc(l.apodo||'—')}</b>, cuenta <b>${esc(l.cuenta)}</b>?<br><span class="mute">Sus EAs dejarán de abrir escaleras nuevas en la próxima consulta (máximo 1 hora).</span></p>
+    <div class="acts"><button class="btn" onclick="cerrar()">Cancelar</button><button class="btn p" style="background:var(--red);border-color:var(--red)" onclick="accLic(${i},'eliminar')">Eliminar</button></div>`);
+}
+function copiar(i){
+  const l=D.licencias[i];
+  const t=`Hola ${l.apodo||''}, tu licencia Zona AV para la cuenta ${l.cuenta} (${l.ea}) está ${l.activa?'activa hasta el '+l.vence.split('.').reverse().join('/'):'desactivada'}.`;
+  const ok=()=>toast('Mensaje copiado');
+  if(navigator.clipboard) navigator.clipboard.writeText(t).then(ok,()=>pedirCopia(t)); else pedirCopia(t);
+}
+function pedirCopia(t){ modal(`<h3>Copiar</h3><textarea id="cp" rows="4" style="width:100%">${esc(t)}</textarea><div class="acts"><button class="btn p" onclick="cerrar()">Listo</button></div>`); setTimeout(()=>{$('cp').select();},50); }
+function formLic(i){
+  const l = i>=0 ? D.licencias[i] : {cuenta:'',apodo:'',ea:'TODAS',vence:'',activa:true,notas:''};
+  let v=l.vence?l.vence.replace(/\./g,'-'):''; if(!v){ const d=pd(D.ahora); d.setDate(d.getDate()+30); v=ymd(d); }
+  const eas=['TODAS','ESCALERA','ESCANER','TOQUES','FIBO','REPORTE'], sel=String(l.ea).toUpperCase().split(/[,+;\s]+/);
+  modal(`<h3>${i>=0?'Editar licencia':'Nueva licencia'}</h3>
+    <div class="fld"><label>Cuenta MT5</label><input type="text" id="fC" inputmode="numeric" value="${esc(l.cuenta)}"></div>
+    <div class="fld"><label>Apodo</label><input type="text" id="fA" value="${esc(l.apodo)}"></div>
+    <div class="fld"><label>Programas</label><div class="chk">${eas.map(e=>`<label><input type="checkbox" class="fE" value="${e}" ${sel.indexOf(e)>=0?'checked':''}>${e}</label>`).join('')}</div></div>
+    <div class="fld"><label>Vence</label><input type="date" id="fV" value="${v}"></div>
+    <div class="fld"><label>Notas</label><input type="text" id="fN" value="${esc(l.notas)}"></div>
+    <div class="row" style="padding:6px 0"><div class="tx"><b>Activa</b></div><button class="sw ${l.activa?'on':''}" id="fAc" onclick="this.classList.toggle('on')"></button></div>
+    <div class="acts"><button class="btn" onclick="cerrar()">Cancelar</button><button class="btn p" id="fG" onclick="guardarLic(${i})">Guardar</button></div>`);
+}
+async function guardarLic(i){
+  let ea=[...document.querySelectorAll('.fE:checked')].map(x=>x.value); if(ea.indexOf('TODAS')>=0) ea=['TODAS'];
+  const d={cuenta:$('fC').value.trim(), apodo:$('fA').value.trim(), ea:ea.join(',')||'TODAS', vence:$('fV').value, notas:$('fN').value.trim(), activa:$('fAc').classList.contains('on')};
+  if(!/^\d+$/.test(d.cuenta)){ toast('La cuenta debe ser un número'); return; }
+  if(!d.vence){ toast('Falta la fecha'); return; }
+  $('fG').disabled=true;
+  if(i>=0){ await accLic(i,'editar',d); }
+  else { try{ const r=await api('licencia',{acc:'nueva',d}); if(!r.ok){toast(r.msg);$('fG').disabled=false;return;} D.licencias=r.licencias; cerrar(); pintar(); toast('Licencia creada'); }catch(e){ toast('Error: '+e); } }
+}
+function modal(h){ $('modal').innerHTML=`<div class="modal" onclick="if(event.target===this)cerrar()"><div class="card">${h}</div></div>`; }
+function cerrar(){ $('modal').innerHTML=''; }
+
+// ---------------------------------------------------------------- AJUSTES
+function vAj(){
+  const a=D.ajustes, L=D.llaves||[];
+  $('vista').innerHTML = `<div class="grid two">
+  <div class="card"><h3>Apariencia</h3>
+    <div class="row"><div class="tx"><b>Tema</b><span>Sistema sigue el modo de tu teléfono o PC</span></div>${seg('t',[['oscuro','Oscuro'],['claro','Claro'],['sistema','Sistema']],S.tema,'setTema')}</div>
+  </div>
+  <div class="card"><h3>Control de los EAs</h3>
+    <div class="row"><div class="tx"><b>Pausa remota</b><span>Ninguna escalera nueva en todas las cuentas. Las abiertas se siguen administrando. Llega en máx. 5 min (EA Reporte).</span></div><button class="sw ${a.pausa?'on':''}" onclick="aj({pausa:${!a.pausa}})"></button></div>
+    <div class="row"><div class="tx"><b>Límite de pérdida diaria</b><span>Al perder esto en el día se pausan las escaleras nuevas hasta mañana. 0 = sin límite.</span></div>
+      <span style="display:flex;gap:6px;align-items:center">-$<input type="number" id="lim" min="0" step="5" value="${a.limite}" style="width:80px"><button class="btn" onclick="aj({limite:+$('lim').value})">Guardar</button></span></div>
+  </div>
+  <div class="card"><h3>Seguridad</h3>
+    <div class="row"><div class="tx"><b>Huella o rostro</b><span>${L.length?L.length+' dispositivo(s) registrado(s)':'Ningún dispositivo registrado'}</span></div>${pkSoporta()?`<button class="btn" onclick="agregarHuella()">Agregar este ${esc(nombreDisp())}</button>`:'<span class="mute" style="font-size:12px">No disponible aquí</span>'}</div>
+    ${L.map(k=>`<div class="row"><div class="tx"><b>${esc(k.nombre)}</b><span>Registrado ${esc(k.creada)} · último uso ${esc(k.uso||'—')}</span></div><button class="btn d" onclick="quitarHuella('${esc(k.id)}','${esc(k.nombre)}')">Quitar</button></div>`).join('')}
+    <div class="row"><div class="tx"><b>Cambiar PIN</b><span>El PIN sirve de respaldo si la huella o el rostro fallan</span></div><button class="btn" onclick="formPin()">Cambiar</button></div>
+    <div class="row"><div class="tx"><b>Cerrar sesión</b><span>En este dispositivo</span></div><button class="btn d" onclick="salir()">Salir</button></div>
+  </div>
+  <div class="card"><h3>Exportar</h3>
+    <div class="row"><div class="tx"><b>Escaleras en CSV</b><span>Con el periodo y los filtros de Estadísticas</span></div><button class="btn" onclick="csvEsc()">Descargar</button></div>
+    <div class="row"><div class="tx"><b>Licencias en CSV</b><span>Todas las licencias</span></div><button class="btn" onclick="csvLic()">Descargar</button></div>
+  </div>
+  <div class="card"><h3>Cuentas conectadas</h3>
+    ${D.cuentas.map(c=>`<div class="row"><div class="tx"><b>${esc(c.cuenta)} · ${esc(c.modo)}</b><span>${esc(c.servidor)} · último reporte ${esc(c.ultimo)} · Reporte v${esc(c.version)}</span></div><span class="dot ${c.hace>=0&&c.hace<=12?'g':'r'}"></span></div>`).join('')||'<div class="empty">Ninguna</div>'}
+  </div></div>`;
+}
+function setTema(v){ S.tema=v; guardar(); tema(); pintar(); }
+async function aj(o){
+  try{ const r=await api('ajustes',{o}); if(!r.ok){toast(r.msg);return;} D.ajustes=r.ajustes; pintar(); toast('Guardado'); }
+  catch(e){ toast('Error: '+e); }
+}
+function quitarHuella(id,nom){
+  modal(`<h3>Quitar huella o rostro</h3><p>¿Quitar <b>${esc(nom)}</b>? Ese dispositivo tendrá que entrar con el PIN.</p>
+    <div class="acts"><button class="btn" onclick="cerrar()">Cancelar</button><button class="btn p" style="background:var(--red);border-color:var(--red)" onclick="quitarHuella2('${esc(id)}')">Quitar</button></div>`);
+}
+async function quitarHuella2(id){ try{ await api('pk_borrar',{id}); cerrar(); toast('Quitado'); cargar(); }catch(e){ toast('Error: '+e); } }
+function formPin(){
+  modal(`<h3>Cambiar PIN</h3>
+    <div class="fld"><label>PIN actual</label><input type="password" id="pa" inputmode="numeric"></div>
+    <div class="fld"><label>PIN nuevo (4 a 8 números)</label><input type="password" id="pn" inputmode="numeric"></div>
+    <div class="fld"><label>Repite el PIN nuevo</label><input type="password" id="pr" inputmode="numeric"></div>
+    <p id="perr" class="neg" style="min-height:18px;margin:0"></p>
+    <div class="acts"><button class="btn" onclick="cerrar()">Cancelar</button><button class="btn p" onclick="cambiarPin()">Guardar</button></div>`);
+}
+async function cambiarPin(){
+  const pn=$('pn').value.trim();
+  if(!/^\d{4,8}$/.test(pn)) return $('perr').textContent='El PIN debe tener de 4 a 8 números';
+  if(pn!==$('pr').value.trim()) return $('perr').textContent='Los dos PIN nuevos no coinciden';
+  try{ const r=await api('cambiar_pin',{actual:$('pa').value.trim(), nuevo:pn}); if(!r.ok) return $('perr').textContent=r.msg; cerrar(); toast('PIN cambiado'); }
+  catch(e){ $('perr').textContent='Error: '+e; }
+}
+async function salir(){ try{ await api('salir'); }catch(e){} tokS(''); D=null; location.reload(); }
+function bajarCsv(nombre, cab, filas){
+  const q=x=>x==null?'':(/[,"\n]/.test(String(x))?'"'+String(x).replace(/"/g,'""')+'"':x);
+  const t=[cab.join(',')].concat(filas.map(f=>f.map(q).join(','))).join('\n');
+  try{
+    const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(['﻿'+t],{type:'text/csv'})); a.download=nombre+'_'+D.ahora.slice(0,10)+'.csv';
+    document.body.appendChild(a); a.click(); a.remove(); toast('CSV descargado');
+  }catch(e){ pedirCopia(t); }
+}
+function csvEsc(){ bajarCsv('escaleras',['Cuenta','Id','Indice','TF','Direccion','Entradas','Lotes','Abre','Cierra','Minutos','Resultado','PeorDD','Fecha'], filtrar()); }
+function csvLic(){ bajarCsv('licencias',['Cuenta','Apodo','EA','Vence','Activa','Notas','Version','UltimoUso'], D.licencias.map(l=>[l.cuenta,l.apodo,l.ea,l.vence,l.activa?'SI':'NO',l.notas,l.version,l.uso])); }
+</script>
+</body>
+</html>
