@@ -145,6 +145,7 @@ nav.bot{display:none}
       <select id="selCta" onchange="S.cta=this.value;guardar();pintar()"></select>
       <span class="pill" id="online"><span class="dot"></span>…</span>
       <button class="btn" onclick="LB=null;cargar()" title="Actualizar">⟳</button>
+      <button class="btn" onclick="pedirSalir()" title="Salir">⏻</button>
     </div>
     <div id="vista"></div>
   </main>
@@ -155,9 +156,9 @@ nav.bot{display:none}
 
 <script>
 // ---------------------------------------------------------------- configuracion
-const APP_VER = '2.1.0';
+const APP_VER = '2.2.0';
 const API = 'https://qehuvzutrbqgppfifapp.supabase.co/functions/v1/web';
-const VERS = {ESCALERA:'1.8.0', ESCANER:'1.7.4', FIBO:'0.6', REPORTE:'0.2'};   // ultimas versiones publicadas
+const VERS = {ESCALERA:'1.9.0', ESCANER:'1.8.0', FIBO:'0.6', REPORTE:'0.2'};   // ultimas versiones publicadas
 const TABS = [['dash','Dashboard','◧'],['est','Estadísticas','▤'],['lab','Laboratorio','⚗'],['lic','Licencias','⚿'],['aj','Ajustes','⚙']];
 
 // ---------------------------------------------------------------- estado
@@ -203,7 +204,7 @@ matchMedia('(prefers-color-scheme: light)').addEventListener('change', tema);
 async function api(a, o){
   const r = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(Object.assign({a, t:tokG()}, o||{}))});
   let j; try{ j = await r.json(); }catch(e){ throw 'respuesta inválida ('+r.status+')'; }
-  if(j && j.sesion===false){ tokS(''); D=null; verLogin('Tu sesión venció. Entra otra vez.'); throw 'sesión'; }
+  if(j && j.sesion===false){ tokS(''); D=null; verLogin('Tu sesión se cerró (venció, saliste o se cambió el PIN). Entra otra vez.'); throw 'sesión'; }
   return j;
 }
 
@@ -320,7 +321,7 @@ async function agregarHuella(){
 function ir(t){ S.tab=t; S.selLic=-1; guardar(); pintar(); window.scrollTo(0,0); }
 function menu(){
   const b = TABS.map(([k,n,i])=>`<button class="nb ${S.tab===k?'on':''}" onclick="ir('${k}')"><i>${i}</i>${n}</button>`).join('');
-  $('side').innerHTML = `<div class="logo"><b>AV</b><span>Zona AV</span></div>${b}<div class="foot">Actualizado ${esc(D.ahora.slice(11))}<br>Se refresca cada minuto<br>App v${APP_VER}</div>`;
+  $('side').innerHTML = `<div class="logo"><b>AV</b><span>Zona AV</span></div>${b}<div class="foot">Actualizado ${esc(D.ahora.slice(11))}<br>Se refresca cada minuto<br>App v${APP_VER}<br><button class="btn d" style="margin-top:10px;width:100%" onclick="pedirSalir()">⏻ Salir</button></div>`;
   $('bot').innerHTML = b;
 }
 function cta(){ return D.cuentas.find(c=>c.cuenta===S.cta) || null; }
@@ -776,8 +777,8 @@ function vAj(){
   <div class="card"><h3>Seguridad</h3>
     <div class="row"><div class="tx"><b>Huella o rostro</b><span>${L.length?L.length+' dispositivo(s) registrado(s)':'Ningún dispositivo registrado'}</span></div>${pkSoporta()?`<button class="btn" onclick="agregarHuella()">Agregar este ${esc(nombreDisp())}</button>`:'<span class="mute" style="font-size:12px">No disponible aquí</span>'}</div>
     ${L.map(k=>`<div class="row"><div class="tx"><b>${esc(k.nombre)}</b><span>Registrado ${esc(k.creada)} · último uso ${esc(k.uso||'—')}</span></div><button class="btn d" onclick="quitarHuella('${esc(k.id)}','${esc(k.nombre)}')">Quitar</button></div>`).join('')}
-    <div class="row"><div class="tx"><b>Cambiar PIN</b><span>El PIN sirve de respaldo si la huella o el rostro fallan</span></div><button class="btn" onclick="formPin()">Cambiar</button></div>
-    <div class="row"><div class="tx"><b>Cerrar sesión</b><span>En este dispositivo</span></div><button class="btn d" onclick="salir()">Salir</button></div>
+    <div class="row"><div class="tx"><b>Cambiar PIN</b><span>El PIN sirve de respaldo si la huella o el rostro fallan. Al cambiarlo se cierran las sesiones de los otros dispositivos.</span></div><button class="btn" onclick="formPin()">Cambiar</button></div>
+    <div class="row"><div class="tx"><b>Cerrar sesión</b><span>${D.sesiones?D.sesiones+' sesión(es) abierta(s) en total':'En este dispositivo'}</span></div><span style="display:flex;gap:6px"><button class="btn d" onclick="salir()">Salir</button><button class="btn d" onclick="pedirSalirTodo()">En todos</button></span></div>
   </div>
   <div class="card"><h3>Exportar</h3>
     <div class="row"><div class="tx"><b>Escaleras en CSV</b><span>Con el periodo y los filtros de Estadísticas</span></div><button class="btn" onclick="csvEsc()">Descargar</button></div>
@@ -809,10 +810,19 @@ async function cambiarPin(){
   const pn=$('pn').value.trim();
   if(!/^\d{4,8}$/.test(pn)) return $('perr').textContent='El PIN debe tener de 4 a 8 números';
   if(pn!==$('pr').value.trim()) return $('perr').textContent='Los dos PIN nuevos no coinciden';
-  try{ const r=await api('cambiar_pin',{actual:$('pa').value.trim(), nuevo:pn}); if(!r.ok) return $('perr').textContent=r.msg; cerrar(); toast('PIN cambiado'); }
+  try{ const r=await api('cambiar_pin',{actual:$('pa').value.trim(), nuevo:pn}); if(!r.ok) return $('perr').textContent=r.msg; cerrar(); toast(r.cerradas?`PIN cambiado. Se cerraron ${r.cerradas} sesión(es) en otros dispositivos.`:'PIN cambiado'); cargar(); }
   catch(e){ $('perr').textContent='Error: '+e; }
 }
 async function salir(){ try{ await api('salir'); }catch(e){} tokS(''); D=null; location.reload(); }
+function pedirSalir(){
+  modal(`<h3>Salir</h3><p>¿Cerrar la sesión en este dispositivo? Para volver a entrar vas a necesitar el PIN o la huella/rostro.</p>
+    <div class="acts"><button class="btn" onclick="cerrar()">Cancelar</button><button class="btn d" onclick="pedirSalirTodo()">En todos</button><button class="btn p" style="background:var(--red);border-color:var(--red)" onclick="salir()">Salir</button></div>`);
+}
+function pedirSalirTodo(){
+  modal(`<h3>Salir en todos los dispositivos</h3><p>Se cierra la sesión en la PC, el celular y cualquier otro dispositivo, también en este. Todos tendrán que entrar otra vez con el PIN o la huella/rostro.</p>
+    <div class="acts"><button class="btn" onclick="cerrar()">Cancelar</button><button class="btn p" style="background:var(--red);border-color:var(--red)" onclick="salirTodo()">Salir en todos</button></div>`);
+}
+async function salirTodo(){ try{ await api('salir_todo'); }catch(e){} tokS(''); D=null; location.reload(); }
 function bajarCsv(nombre, cab, filas){
   const q=x=>x==null?'':(/[,"\n]/.test(String(x))?'"'+String(x).replace(/"/g,'""')+'"':x);
   const t=[cab.join(',')].concat(filas.map(f=>f.map(q).join(','))).join('\n');
