@@ -172,7 +172,7 @@ nav.bot{display:none}
 
 <script>
 // ---------------------------------------------------------------- configuracion
-const APP_VER = '2.4.0';
+const APP_VER = '2.5.0';
 const API = 'https://qehuvzutrbqgppfifapp.supabase.co/functions/v1/web';
 const VERS = {ESCALERA:'1.9.1', ESCANER:'1.9.0', FIBO:'0.6', REPORTE:'0.3'};   // ultimas versiones publicadas
 const TABS = [['dash','Dashboard','◧'],['est','Estadísticas','▤'],['lab','Laboratorio','⚗'],['lic','Licencias','⚿'],['aj','Ajustes','⚙']];
@@ -220,8 +220,12 @@ function tema(){
 }
 matchMedia('(prefers-color-scheme: light)').addEventListener('change', tema);
 
+function devId(){
+  try{ let d=localStorage.getItem('zavdev'); if(!d){ d=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(16).slice(2)).replace(/[^A-Za-z0-9-]/g,''); localStorage.setItem('zavdev',d); } return d; }catch(e){ return ''; }
+}
+const MODO = (matchMedia('(display-mode: standalone)').matches || navigator.standalone) ? 'app' : 'web';
 async function api(a, o){
-  const r = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(Object.assign({a, t:tokG()}, o||{}))});
+  const r = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(Object.assign({a, t:tokG(), dev:devId(), modo:MODO}, o||{}))});
   let j; try{ j = await r.json(); }catch(e){ throw 'respuesta inválida ('+r.status+')'; }
   if(j && j.sesion===false){ tokS(''); D=null; verLogin('Tu sesión se cerró (venció, saliste o se cambió el PIN). Entra otra vez.'); throw 'sesión'; }
   return j;
@@ -271,7 +275,7 @@ async function verLogin(msg){
     <input id="pin" type="password" inputmode="numeric" autocomplete="current-password" onkeydown="if(event.key==='Enter')entrarPin()">
     <button class="btn ${huella?'':'p'}" style="width:100%" onclick="entrarPin()">Entrar con PIN</button>
     <p id="lerr" class="neg" style="min-height:20px">${esc(msg||'')}</p>
-    <p style="font-size:12px"><a href="#" class="mute" onclick="formCrearPin();return false">¿Olvidaste el PIN?</a></p>`;
+    ${location.hash==='#recuperar'?`<p style="font-size:12px"><a href="#" class="mute" onclick="formCrearPin();return false">¿Olvidaste el PIN?</a></p>`:''}`;
   if(!huella) setTimeout(()=>$('pin')&&$('pin').focus(),50);
 }
 function formCrearPin(msg){
@@ -327,7 +331,7 @@ setInterval(()=>{ if(D && !document.hidden && !$('modal').innerHTML) cargar(fals
 document.addEventListener('visibilitychange', ()=>{ if(D && !document.hidden) cargar(false,true); });
 function girando(d){ GIRO=Math.max(0,GIRO+d); const b=$('bAct'); if(b) b.classList.toggle('gira',GIRO>0); }
 async function actualizar(){
-  const t0=Date.now(); girando(1); LB=null; LCARGA='';
+  const t0=Date.now(); girando(1); LB=null; LCARGA=''; BIT=null;
   try{ await cargar(); } finally{ setTimeout(()=>girando(-1), Math.max(0,700-(Date.now()-t0))); }
 }
 
@@ -826,6 +830,7 @@ function cerrar(){ $('modal').innerHTML=''; }
 // ---------------------------------------------------------------- AJUSTES
 function vAj(){
   const a=D.ajustes, L=D.llaves||[];
+  if(!BIT || Date.now()-BITT>=60000) setTimeout(bitCargar,0);
   $('vista').innerHTML = `<div class="grid two">
   <div class="card"><h3>Apariencia</h3>
     <div class="row"><div class="tx"><b>Tema</b><span>Sistema sigue el modo de tu teléfono o PC</span></div>${seg('t',[['oscuro','Oscuro'],['claro','Claro'],['sistema','Sistema']],S.tema,'setTema')}</div>
@@ -848,6 +853,8 @@ function vAj(){
     <div class="mute" style="font-size:12px;margin-bottom:6px">Solo ven el Laboratorio, con su propio PIN. No ven cuentas, escaleras, licencias ni ajustes.</div>
     ${(D.invitados||[]).map((g,i)=>`<div class="row"><div class="tx"><b>${esc(g.nombre)}</b><span>${g.vence?'Vence '+esc(g.vence)+(g.vence<D.ahora.slice(0,10)?' · VENCIDO':''):'Sin vencimiento'} · último uso ${esc(g.uso||'—')}</span></div><button class="btn" onclick="formInv(${i})">Editar</button><button class="btn d" onclick="quitarInv(${i})">Quitar</button></div>`).join('')||'<div class="empty">Ningún invitado</div>'}
   </div>
+  <div class="card" style="grid-column:1/-1"><h3>Sesiones abiertas</h3>${BIT?htmlSes():'<div class="empty">Cargando…</div>'}</div>
+  <div class="card" style="grid-column:1/-1"><h3>Bitácora de accesos <span class="r"><span class="mute" style="font-size:12px;font-weight:400">últimos 100</span></span></h3>${BIT?htmlBit():'<div class="empty">Cargando…</div>'}</div>
   <div class="card"><h3>Exportar</h3>
     <div class="row"><div class="tx"><b>Escaleras en CSV</b><span>Con el periodo y los filtros de Estadísticas</span></div><button class="btn" onclick="csvEsc()">Descargar</button></div>
     <div class="row"><div class="tx"><b>Licencias en CSV</b><span>Todas las licencias</span></div><button class="btn" onclick="csvLic()">Descargar</button></div>
@@ -855,6 +862,21 @@ function vAj(){
   <div class="card"><h3>Cuentas conectadas</h3>
     ${D.cuentas.map(c=>`<div class="row"><div class="tx"><b>${esc(c.cuenta)} · ${esc(c.modo)}</b><span>${esc(c.servidor)} · último reporte ${esc(c.ultimo)} · Reporte v${esc(c.version)}</span></div><span class="dot ${c.hace>=0&&c.hace<=12?'g':'r'}"></span></div>`).join('')||'<div class="empty">Ninguna</div>'}
   </div></div>`;
+}
+let BIT=null, BITT=0;
+const EV_BIT={login_pin:'Entrada con PIN',huella:'Entrada con huella/rostro',crear_pin:'PIN de recuperación',pin_cambiado:'Cambio de PIN'};
+async function bitCargar(){
+  if(BIT && Date.now()-BITT<60000) return;
+  try{ const r=await api('bitacora'); if(r&&r.ok){ BIT=r; BITT=Date.now(); if(S.tab==='aj') vAj(); } }catch(e){}
+}
+function htmlSes(){
+  return (BIT.sesiones||[]).map(x=>`<div class="row"><div class="tx"><b>${esc(x.nombre)} · ${esc(x.disp)} ${x.actual?'<span class="badge b-ok">Este</span>':''}</b><span>${esc(x.modo)} · ${esc(x.ip)} · último uso ${esc(x.uso||'—')}</span></div>${x.actual?'':`<button class="btn d" onclick="cerrarSes('${esc(x.id)}')">Cerrar</button>`}</div>`).join('')||'<div class="empty">Ninguna</div>';
+}
+function htmlBit(){
+  return (BIT.registros||[]).map(x=>`<div class="row"><div class="tx"><b>${esc(EV_BIT[x.evento]||x.evento)} ${x.ok?'<span class="badge b-ok">OK</span>':'<span class="badge b-r">fallo</span>'}${x.nuevo?' <span class="badge b-y">Dispositivo nuevo</span>':''}</b><span>${esc(x.t)} · ${esc(x.nombre||'—')} · ${esc(x.disp)} · ${esc(x.modo)}<span class="mh"> · ${esc(x.ip)}</span>${x.detalle?' · '+esc(x.detalle):''}</span></div></div>`).join('')||'<div class="empty">Sin registros</div>';
+}
+async function cerrarSes(id){
+  try{ const r=await api('sesion_cerrar',{id}); if(r&&r.ok){ BIT=r; BITT=Date.now(); vAj(); toast('Sesión cerrada'); } else toast((r&&r.msg)||'No se pudo'); }catch(e){}
 }
 function ajLim(c){ aj({limiteCuenta:{cuenta:c, valor:+$('lim_'+c).value}}); }
 function formInv(i){
