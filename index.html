@@ -172,7 +172,7 @@ nav.bot{display:none}
 
 <script>
 // ---------------------------------------------------------------- configuracion
-const APP_VER = '2.3.0';
+const APP_VER = '2.4.0';
 const API = 'https://qehuvzutrbqgppfifapp.supabase.co/functions/v1/web';
 const VERS = {ESCALERA:'1.9.1', ESCANER:'1.9.0', FIBO:'0.6', REPORTE:'0.3'};   // ultimas versiones publicadas
 const TABS = [['dash','Dashboard','◧'],['est','Estadísticas','▤'],['lab','Laboratorio','⚗'],['lic','Licencias','⚿'],['aj','Ajustes','⚙']];
@@ -313,13 +313,14 @@ async function cargar(recien, silencioso){
     const r = await api('datos');
     if(!r.ok){ toast(r.msg||'Error'); return; }
     D = r;
+    if(D.rol==='lab' && S.tab!=='lab') S.tab='lab';
     $('login').style.display='none'; $('app').style.display='flex';
     const cs = D.cuentas.map(c=>c.cuenta);
     if(!S.cta || cs.indexOf(S.cta)<0) S.cta = cs[0]||'';
     $('selCta').innerHTML = cs.map(c=>{ const x=D.cuentas.find(k=>k.cuenta===c); return `<option value="${c}" ${c===S.cta?'selected':''}>${c} · ${esc(x.modo)}</option>`; }).join('') || '<option>Sin reportes</option>';
     if(silencioso) ANIM=false;
     pintar(); ANIM=true;
-    if(recien && pkSoporta() && !marca('zavpk')) ofrecerHuella();
+    if(recien && D.rol!=='lab' && pkSoporta() && !marca('zavpk')) ofrecerHuella();
   }catch(e){ if(e==='sesión') return; if(!D) verLogin('Sin conexión: '+e); else toast('Sin conexión: '+e); }
 }
 setInterval(()=>{ if(D && !document.hidden && !$('modal').innerHTML) cargar(false,true); }, 60000);
@@ -344,8 +345,9 @@ async function agregarHuella(){
 }
 
 function ir(t){ S.tab=t; S.selLic=-1; guardar(); pintar(); window.scrollTo(0,0); }
+function tabsVis(){ return (D && D.rol==='lab') ? TABS.filter(t=>t[0]==='lab') : TABS; }
 function menu(){
-  const b = TABS.map(([k,n,i])=>`<button class="nb ${S.tab===k?'on':''}" onclick="ir('${k}')"><i>${i}</i>${n}</button>`).join('');
+  const b = tabsVis().map(([k,n,i])=>`<button class="nb ${S.tab===k?'on':''}" onclick="ir('${k}')"><i>${i}</i>${n}</button>`).join('');
   $('side').innerHTML = `<div class="logo"><b>AV</b><span>Zona AV</span></div>${b}<div class="foot">Actualizado ${esc(D.ahora.slice(11))}<br>Se refresca cada minuto<br>App v${APP_VER}<br><button class="btn salir" style="margin-top:10px;width:100%" onclick="pedirSalir()">⏻ Salir</button></div>`;
   $('bot').innerHTML = b;
 }
@@ -354,12 +356,15 @@ function escs(){ return D.escaleras.filter(e=>e[0]===S.cta); }   // [cuenta,id,i
 
 function pintar(){
   if(!D) return;
+  const inv = D.rol==='lab';
+  if(inv) S.tab='lab';
   $('vista').classList.toggle('an', ANIM);
   menu();
   $('titulo').textContent = TABS.find(t=>t[0]===S.tab)[1];
   const c = cta();
   const on = $('online');
-  $('selCta').style.display = (S.tab==='lic'||S.tab==='aj'||S.tab==='lab') ? 'none':'';
+  $('selCta').style.display = (inv||S.tab==='lic'||S.tab==='aj'||S.tab==='lab') ? 'none':'';
+  on.style.display = inv ? 'none' : '';
   if(!c){ on.innerHTML='<span class="dot"></span>Sin reportes'; }
   else if(c.hace>=0 && c.hace<=12) on.innerHTML=`<span class="dot g"></span>EA conectado · hace ${c.hace} min`;
   else on.innerHTML=`<span class="dot r"></span>Sin reporte desde ${esc(c.ultimo)}`;
@@ -621,7 +626,7 @@ function vLab(){
       <div class="g"><span>Entradas máximas</span>${seg('',[3,4,5,6].map(n=>[n,String(n)]),x.m,"labN.bind(null,'m')")}</div>
       <div class="g"><span>Gestionar hasta (nivel del SL)</span>${seg('',L_AV.map((n,i)=>[i,n]),x.a,"labN.bind(null,'a')")}</div>
       <div class="g"><span>TP</span>${seg('',[[40,'40%'],[45,'45%']],x.t,"labN.bind(null,'t')")}</div>
-      <div class="g"><span>Riesgo por escalera ($)</span><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input type="number" min="1" step="5" value="${rs}" style="width:90px" onchange="labRies(this.value)"><div class="chips"><button class="chip ${rs===100?'on':''}" onclick="labRies(100)">$100</button><button class="chip ${rs===65?'on':''}" onclick="labRies(65)">$65</button></div></div></div>
+      <div class="g"><span>Riesgo por escalera ($)</span><input type="number" min="1" step="1" value="${rs}" style="width:110px" onchange="labRies(this.value)"></div>
     </div>
     <div class="filtros" style="margin:14px 0 8px">
       ${sel('fam',fams.map(f=>[f,f]),x.fam,'Todas las familias')}
@@ -839,6 +844,10 @@ function vAj(){
     <div class="row"><div class="tx"><b>Cambiar PIN</b><span>El PIN sirve de respaldo si la huella o el rostro fallan. Al cambiarlo se cierran las sesiones de los otros dispositivos.</span></div><button class="btn" onclick="formPin()">Cambiar</button></div>
     <div class="row"><div class="tx"><b>Cerrar sesión</b><span>${D.sesiones?D.sesiones+' sesión(es) abierta(s) en total':'En este dispositivo'}</span></div><span style="display:flex;gap:6px"><button class="btn d" onclick="salir()">Salir</button><button class="btn d" onclick="pedirSalirTodo()">En todos</button></span></div>
   </div>
+  <div class="card"><h3>Invitados <span class="r"><button class="btn" onclick="formInv(-1)">+ Nuevo</button></span></h3>
+    <div class="mute" style="font-size:12px;margin-bottom:6px">Solo ven el Laboratorio, con su propio PIN. No ven cuentas, escaleras, licencias ni ajustes.</div>
+    ${(D.invitados||[]).map((g,i)=>`<div class="row"><div class="tx"><b>${esc(g.nombre)}</b><span>${g.vence?'Vence '+esc(g.vence)+(g.vence<D.ahora.slice(0,10)?' · VENCIDO':''):'Sin vencimiento'} · último uso ${esc(g.uso||'—')}</span></div><button class="btn" onclick="formInv(${i})">Editar</button><button class="btn d" onclick="quitarInv(${i})">Quitar</button></div>`).join('')||'<div class="empty">Ningún invitado</div>'}
+  </div>
   <div class="card"><h3>Exportar</h3>
     <div class="row"><div class="tx"><b>Escaleras en CSV</b><span>Con el periodo y los filtros de Estadísticas</span></div><button class="btn" onclick="csvEsc()">Descargar</button></div>
     <div class="row"><div class="tx"><b>Licencias en CSV</b><span>Todas las licencias</span></div><button class="btn" onclick="csvLic()">Descargar</button></div>
@@ -848,6 +857,35 @@ function vAj(){
   </div></div>`;
 }
 function ajLim(c){ aj({limiteCuenta:{cuenta:c, valor:+$('lim_'+c).value}}); }
+function formInv(i){
+  const g = i>=0 ? D.invitados[i] : {nombre:'',vence:''};
+  modal(`<h3>${i>=0?'Editar invitado':'Nuevo invitado'}</h3>
+    <div class="fld"><label>Nombre</label><input type="text" id="iN" value="${esc(g.nombre)}"></div>
+    <div class="fld"><label>${i>=0?'PIN nuevo (vacío = no cambiarlo)':'PIN (4 a 8 números)'}</label><input type="text" id="iP" inputmode="numeric" autocomplete="off"></div>
+    <div class="fld"><label>Vence (opcional)</label><input type="date" id="iV" value="${esc(g.vence||'')}"></div>
+    <p id="ierr" class="neg" style="min-height:18px;margin:0"></p>
+    <div class="acts"><button class="btn" onclick="cerrar()">Cancelar</button><button class="btn p" onclick="guardarInv(${i})">Guardar</button></div>`);
+}
+async function guardarInv(i){
+  const nombre=$('iN').value.trim(), pin=$('iP').value.trim(), vence=$('iV').value;
+  const err = t => { $('ierr').textContent=t; };
+  if(!nombre) return err('Falta el nombre');
+  if((i<0 || pin) && !/^\d{4,8}$/.test(pin)) return err('El PIN debe tener de 4 a 8 números');
+  try{
+    const r = await api(i>=0?'invitado_editar':'invitado_nuevo', {id:i>=0?D.invitados[i].id:undefined, nombre, pin, vence});
+    if(!r.ok) return err(r.msg);
+    D.invitados = r.invitados; cerrar(); pintar(); toast(i>=0?'Invitado guardado':'Invitado creado');
+  }catch(e){ err('Error: '+e); }
+}
+function quitarInv(i){
+  const g=D.invitados[i];
+  modal(`<h3>Quitar invitado</h3><p>¿Quitar a <b>${esc(g.nombre)}</b>? Su sesión se cierra al instante y su PIN deja de servir.</p>
+    <div class="acts"><button class="btn" onclick="cerrar()">Cancelar</button><button class="btn p" style="background:var(--red);border-color:var(--red)" onclick="quitarInv2(${i})">Quitar</button></div>`);
+}
+async function quitarInv2(i){
+  try{ const r=await api('invitado_quitar',{id:D.invitados[i].id}); if(!r.ok){ toast(r.msg); return; } D.invitados=r.invitados; cerrar(); pintar(); toast('Invitado quitado'); }
+  catch(e){ toast('Error: '+e); }
+}
 function setTema(v){ S.tema=v; guardar(); tema(); pintar(); }
 async function aj(o){
   try{ const r=await api('ajustes',{o}); if(!r.ok){toast(r.msg);return;} D.ajustes=r.ajustes; pintar(); toast('Guardado'); }
@@ -876,7 +914,7 @@ async function cambiarPin(){
 async function salir(){ try{ await api('salir'); }catch(e){} tokS(''); D=null; location.reload(); }
 function pedirSalir(){
   modal(`<h3>Salir</h3><p>¿Cerrar la sesión en este dispositivo? Para volver a entrar vas a necesitar el PIN o la huella/rostro.</p>
-    <div class="acts"><button class="btn" onclick="cerrar()">Cancelar</button><button class="btn d" onclick="pedirSalirTodo()">En todos</button><button class="btn p" style="background:var(--red);border-color:var(--red)" onclick="salir()">Salir</button></div>`);
+    <div class="acts"><button class="btn" onclick="cerrar()">Cancelar</button>${D&&D.rol==='lab'?'':'<button class="btn d" onclick="pedirSalirTodo()">En todos</button>'}<button class="btn p" style="background:var(--red);border-color:var(--red)" onclick="salir()">Salir</button></div>`);
 }
 function pedirSalirTodo(){
   modal(`<h3>Salir en todos los dispositivos</h3><p>Se cierra la sesión en la PC, el celular y cualquier otro dispositivo, también en este. Todos tendrán que entrar otra vez con el PIN o la huella/rostro.</p>
