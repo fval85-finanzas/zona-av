@@ -132,6 +132,22 @@ nav.bot{display:none}
  .filtros{grid-template-columns:1fr 1fr}
  select,input[type=text],input[type=number],input[type=date],input[type=password],textarea{font-size:16px}  /* evita el zoom de iPhone */
 }
+.btn.salir{color:var(--red);border-color:color-mix(in srgb,var(--red) 55%,var(--line));background:color-mix(in srgb,var(--red) 10%,var(--card));font-weight:700}
+.btn.salir:hover{background:color-mix(in srgb,var(--red) 20%,var(--card))}
+.gi{display:inline-block}
+.gira .gi{animation:gira .8s linear infinite}
+@keyframes gira{to{transform:rotate(360deg)}}
+@keyframes dibuja{to{stroke-dashoffset:0}}
+@keyframes aparece{from{opacity:0}to{opacity:1}}
+@keyframes crece{from{transform:scaleY(0)}}
+@keyframes ancho{from{width:0}}
+.an .dr{stroke-dasharray:1;stroke-dashoffset:1;animation:dibuja 1.1s ease-out forwards}
+.an .fd{animation:aparece .9s .35s ease-out both}
+.an .bb{transform-box:fill-box;animation:crece .6s ease-out both}
+.an .bar{animation:ancho .7s ease-out}
+.an .hm div:not(.lb){animation:aparece .6s ease-out both}
+.cd.ck{cursor:pointer}.cd.ck:hover{border-color:var(--blue)}
+@media(prefers-reduced-motion:reduce){.an .dr,.an .fd,.an .bb,.an .bar,.an .hm div{animation:none!important;stroke-dasharray:none!important;stroke-dashoffset:0!important}.gira .gi{animation:none}}
 </style>
 </head>
 <body>
@@ -144,8 +160,8 @@ nav.bot{display:none}
       <h1 id="titulo">Dashboard</h1>
       <select id="selCta" onchange="S.cta=this.value;guardar();pintar()"></select>
       <span class="pill" id="online"><span class="dot"></span>…</span>
-      <button class="btn" onclick="LB=null;cargar()" title="Actualizar">⟳</button>
-      <button class="btn" onclick="pedirSalir()" title="Salir">⏻</button>
+      <button class="btn" id="bAct" onclick="actualizar()" title="Actualizar"><span class="gi">⟳</span></button>
+      <button class="btn salir" onclick="pedirSalir()" title="Salir">⏻ Salir</button>
     </div>
     <div id="vista"></div>
   </main>
@@ -156,19 +172,22 @@ nav.bot{display:none}
 
 <script>
 // ---------------------------------------------------------------- configuracion
-const APP_VER = '2.2.2';
+const APP_VER = '2.3.0';
 const API = 'https://qehuvzutrbqgppfifapp.supabase.co/functions/v1/web';
 const VERS = {ESCALERA:'1.9.1', ESCANER:'1.9.0', FIBO:'0.6', REPORTE:'0.3'};   // ultimas versiones publicadas
 const TABS = [['dash','Dashboard','◧'],['est','Estadísticas','▤'],['lab','Laboratorio','⚗'],['lic','Licencias','⚿'],['aj','Ajustes','⚙']];
 
 // ---------------------------------------------------------------- estado
 let D = null;                                 // datos del servidor
+let ANIM = true;                              // animar los graficos (no en el refresco automatico)
+let GIRO = 0;                                 // cargas en curso (el boton Actualizar gira)
 const S = Object.assign({tab:'dash', tema:'oscuro', cta:'', mes:'', per:'30', graf:'linea', f:{}, selLic:-1}, leer());
 if(!S.f || typeof S.f!=='object') S.f={};
 // Laboratorio: por defecto la configuracion de la demo (FlipX M1-M4, EMA50, 5 entradas, AV2, TP 40)
 const LAB_DEMO = {e:1, m:5, a:1, t:40, fam:'FlipX', ind:'', tfs:['M1','M2','M3','M4'], dir:'', desde:'', hasta:'', fuente:''};
-S.lab = Object.assign(JSON.parse(JSON.stringify(LAB_DEMO)), {orden:'r', todas:false}, (S.lab && typeof S.lab==='object') ? S.lab : {});
+S.lab = Object.assign(JSON.parse(JSON.stringify(LAB_DEMO)), {orden:'r', todas:false, riesgo:100}, (S.lab && typeof S.lab==='object') ? S.lab : {});
 if(!Array.isArray(S.lab.tfs)) S.lab.tfs=[];
+if(!(+S.lab.riesgo>0)) S.lab.riesgo=100;
 function leer(){ try{ return JSON.parse(localStorage.getItem('zav')||'{}'); }catch(e){ return {}; } }
 function guardar(){ try{ const o=Object.assign({},S); delete o.selLic; localStorage.setItem('zav',JSON.stringify(o)); }catch(e){} }
 function tokG(){ try{ return localStorage.getItem('zavtok')||''; }catch(e){ return S._t||''; } }
@@ -289,7 +308,7 @@ async function entrarHuella(){
   }catch(e){ lerr(e&&e.name==='NotAllowedError'?'Cancelado. Prueba otra vez o usa el PIN.':'Error: '+(e&&e.message||e)); }
 }
 
-async function cargar(recien){
+async function cargar(recien, silencioso){
   try{
     const r = await api('datos');
     if(!r.ok){ toast(r.msg||'Error'); return; }
@@ -298,12 +317,18 @@ async function cargar(recien){
     const cs = D.cuentas.map(c=>c.cuenta);
     if(!S.cta || cs.indexOf(S.cta)<0) S.cta = cs[0]||'';
     $('selCta').innerHTML = cs.map(c=>{ const x=D.cuentas.find(k=>k.cuenta===c); return `<option value="${c}" ${c===S.cta?'selected':''}>${c} · ${esc(x.modo)}</option>`; }).join('') || '<option>Sin reportes</option>';
-    pintar();
+    if(silencioso) ANIM=false;
+    pintar(); ANIM=true;
     if(recien && pkSoporta() && !marca('zavpk')) ofrecerHuella();
   }catch(e){ if(e==='sesión') return; if(!D) verLogin('Sin conexión: '+e); else toast('Sin conexión: '+e); }
 }
-setInterval(()=>{ if(D && !document.hidden && !$('modal').innerHTML) cargar(); }, 60000);
-document.addEventListener('visibilitychange', ()=>{ if(D && !document.hidden) cargar(); });
+setInterval(()=>{ if(D && !document.hidden && !$('modal').innerHTML) cargar(false,true); }, 60000);
+document.addEventListener('visibilitychange', ()=>{ if(D && !document.hidden) cargar(false,true); });
+function girando(d){ GIRO=Math.max(0,GIRO+d); const b=$('bAct'); if(b) b.classList.toggle('gira',GIRO>0); }
+async function actualizar(){
+  const t0=Date.now(); girando(1); LB=null; LCARGA='';
+  try{ await cargar(); } finally{ setTimeout(()=>girando(-1), Math.max(0,700-(Date.now()-t0))); }
+}
 
 function ofrecerHuella(){
   modal(`<h3>Entrar con huella o rostro</h3><p>¿Quieres activar la entrada con huella o rostro en este ${esc(nombreDisp())}? El PIN sigue sirviendo de respaldo.</p>
@@ -321,7 +346,7 @@ async function agregarHuella(){
 function ir(t){ S.tab=t; S.selLic=-1; guardar(); pintar(); window.scrollTo(0,0); }
 function menu(){
   const b = TABS.map(([k,n,i])=>`<button class="nb ${S.tab===k?'on':''}" onclick="ir('${k}')"><i>${i}</i>${n}</button>`).join('');
-  $('side').innerHTML = `<div class="logo"><b>AV</b><span>Zona AV</span></div>${b}<div class="foot">Actualizado ${esc(D.ahora.slice(11))}<br>Se refresca cada minuto<br>App v${APP_VER}<br><button class="btn d" style="margin-top:10px;width:100%" onclick="pedirSalir()">⏻ Salir</button></div>`;
+  $('side').innerHTML = `<div class="logo"><b>AV</b><span>Zona AV</span></div>${b}<div class="foot">Actualizado ${esc(D.ahora.slice(11))}<br>Se refresca cada minuto<br>App v${APP_VER}<br><button class="btn salir" style="margin-top:10px;width:100%" onclick="pedirSalir()">⏻ Salir</button></div>`;
   $('bot').innerHTML = b;
 }
 function cta(){ return D.cuentas.find(c=>c.cuenta===S.cta) || null; }
@@ -329,6 +354,7 @@ function escs(){ return D.escaleras.filter(e=>e[0]===S.cta); }   // [cuenta,id,i
 
 function pintar(){
   if(!D) return;
+  $('vista').classList.toggle('an', ANIM);
   menu();
   $('titulo').textContent = TABS.find(t=>t[0]===S.tab)[1];
   const c = cta();
@@ -348,13 +374,14 @@ function vDash(){
   let sem=0, mes=0, nm=0; E.forEach(e=>{ if(e[12]>=lun) sem+=e[10]; if(e[12].slice(0,7)===mes1){ mes+=e[10]; nm++; } });
   const flot = c.equity - c.balance;
   const bal0 = c.balance - c.plhoy;
+  const lim = limiteDe(c.cuenta);
   const pz = D.ajustes.pausa ? `<span class="badge b-r">PAUSA REMOTA ACTIVA</span>` :
-            (D.ajustes.limite && c.plhoy <= -D.ajustes.limite ? `<span class="badge b-r">LÍMITE DIARIO ALCANZADO</span>` : '');
+            (lim && c.plhoy <= -lim ? `<span class="badge b-r">LÍMITE DIARIO ALCANZADO</span>` : '');
   let h = pz ? `<div style="margin-bottom:12px">${pz}</div>` : '';
   h += `<div class="grid k6">
     ${kpi('Balance', $$(c.balance), '', esc(c.modo)+' · '+esc(c.servidor))}
     ${kpi('Equity', $$(c.equity), '', 'Flotante <span class="'+cl(flot)+'">'+sg(flot)+'</span>')}
-    ${kpi('Hoy', sg(c.plhoy), cl(c.plhoy), pct(c.plhoy,bal0).toFixed(2)+'%'+(D.ajustes.limite?' · límite -$'+D.ajustes.limite:''))}
+    ${kpi('Hoy', sg(c.plhoy), cl(c.plhoy), pct(c.plhoy,bal0).toFixed(2)+'%'+(lim?' · límite -$'+lim:''))}
     ${kpi('Esta semana', sg(sem), cl(sem), 'desde el lunes')}
     ${kpi('Este mes', sg(mes), cl(mes), nm+' escaleras')}
     ${kpi('Riesgo abierto', $$(c.riesgo), c.riesgo>0?'neg':'', c.nAbiertas+' escalera(s) abierta(s)')}
@@ -372,6 +399,7 @@ function vDash(){
   h += `<div class="card" style="margin-top:14px">${calendario(E,c)}</div>`;
   $('vista').innerHTML = h;
 }
+function limiteDe(cuenta){ const L=D.ajustes.limites||{}; return (cuenta in L) ? L[cuenta] : D.ajustes.limite; }
 function kpi(l,v,c,s){ return `<div class="card kpi"><div class="l">${l}</div><div class="v ${c||''}">${v}</div><div class="s">${s||''}</div></div>`; }
 
 function calendario(E,c){
@@ -393,13 +421,22 @@ function calendario(E,c){
       const k=ymd(d), x=dia[k], fuera=d.getMonth()!==m-1;
       if(x && !fuera){ ws+=x.r; wn+=x.n; }
       const p = x ? pct(x.r, c.balance - after(k) + 0) : 0;
-      h += `<div class="cd ${fuera?'x':''} ${k===ymd(hoy)?'t':''} ${x&&!fuera?(x.r>=0?'pg':'ng'):''}"><span class="dn">${d.getDate()}${x?' · '+x.n:''}</span>` +
+      h += `<div class="cd ${fuera?'x':''} ${k===ymd(hoy)?'t':''} ${x&&!fuera?(x.r>=0?'pg':'ng')+' ck':''}" ${x&&!fuera?`onclick="verDia('${k}')"`:''}><span class="dn">${d.getDate()}${x?' · '+x.n:''}</span>` +
            (x&&!fuera ? `<span class="dv ${cl(x.r)}"><span class="lg">${sg(x.r)}</span><span class="sh">${sg(x.r,0)}</span></span><span class="dp">${p.toFixed(2)}%</span>` : '') + `</div>`;
       d.setDate(d.getDate()+1);
     }
     h += `<div class="cd wk"><span class="dn">${wn?wn+'<span class="lg"> esc.</span>':''}</span>${wn?`<span class="dv ${cl(ws)}"><span class="lg">${sg(ws)}</span><span class="sh">${sg(ws,0)}</span></span>`:''}</div>`;
   }
   return h + `</div>`;
+}
+function verDia(k){
+  const E=escs().filter(e=>e[12]===k).sort((a,b)=>a[8]<b[8]?-1:1);
+  const tot=E.reduce((s,e)=>s+e[10],0), g=E.filter(e=>e[10]>0).length, [y,m,d]=k.split('-').map(Number);
+  modal(`<h3>${d} de ${MESES[m-1]} ${y}</h3>
+    <div class="msum"><span>Resultado: <b class="${cl(tot)}">${sg(tot)}</b></span><span>Escaleras: <b>${E.length}</b></span><span>Ganadas: <b class="pos">${g}</b></span><span>Perdidas: <b class="neg">${E.length-g}</b></span></div>
+    <div class="tw"><table><tr><th>Abre – cierra</th><th>Índice</th><th>TF</th><th></th><th class="n">Ent.</th><th class="n mh">Lotes</th><th class="n">DD</th><th class="n">Resultado</th></tr>` +
+    E.map(e=>`<tr><td class="mute">${esc(e[7].slice(11))} – ${esc(e[8].slice(11))}</td><td>${esc(e[2])}</td><td>${esc(e[3]||'—')}</td><td>${e[4]==='COMPRA'?'▲':'▼'}</td><td class="n">${e[5]}</td><td class="n mh">${e[6]}</td><td class="n neg">${e[11]==null?'—':$$(e[11])}</td><td class="n ${cl(e[10])}"><b>${sg(e[10])}</b></td></tr>`).join('') +
+    `</table></div><div class="acts"><button class="btn p" onclick="cerrar()">Cerrar</button></div>`, 680);
 }
 function mover(k){ const [y,m]=S.mes.split('-').map(Number); const d=new Date(y,m-1+k,1); S.mes=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); guardar(); pintar(); }
 
@@ -511,15 +548,15 @@ function grafico(E){
   if(S.graf==='barras'){
     const bw=Math.max(3,Math.min(28,(W-P-10)/n*0.7));
     pts.forEach((p,i)=>{ const x=P+(i+0.5)*(W-P-10)/n-bw/2, y=Math.min(Y(p[1]),Y(0)), h=Math.max(1,Math.abs(Y(p[1])-Y(0)));
-      g+=`<rect x="${x}" y="${y}" width="${bw}" height="${h}" rx="2" fill="var(${p[1]>=0?'--blue':'--red'})"><title>${p[0]}: ${sg(p[1])}</title></rect>`; });
+      g+=`<rect class="bb" style="transform-origin:50% ${p[1]>=0?'100%':'0%'};animation-delay:${Math.min(i*15,600)}ms" x="${x}" y="${y}" width="${bw}" height="${h}" rx="2" fill="var(${p[1]>=0?'--blue':'--red'})"><title>${p[0]}: ${sg(p[1])}</title></rect>`; });
     const lb=[0,Math.floor(n/2),n-1].filter((v,i,a)=>a.indexOf(v)===i);
     lb.forEach(i=>g+=`<text x="${P+(i+0.5)*(W-P-10)/n}" y="${H-2}" text-anchor="middle" font-size="11" fill="var(--mute)">${pts[i][0].slice(5)}</text>`);
   } else {
     const line = pts.map((p,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(p[1]).toFixed(1)).join(' ');
     const last = vs[vs.length-1], col = last>=0?'--blue':'--red';
-    if(S.graf==='area') g+=`<path d="${line} L${X(n-1)} ${Y(0)} L${X(0)} ${Y(0)} Z" fill="var(${col})" opacity=".18"/>`;
-    g+=`<path d="${line}" fill="none" stroke="var(${col})" stroke-width="2.2" stroke-linejoin="round"/>`;
-    g+=`<circle cx="${X(n-1)}" cy="${Y(last)}" r="4" fill="var(${col})"/>`;
+    if(S.graf==='area') g+=`<path class="fd" d="${line} L${X(n-1)} ${Y(0)} L${X(0)} ${Y(0)} Z" fill="var(${col})" opacity=".18"/>`;
+    g+=`<path class="dr" pathLength="1" d="${line}" fill="none" stroke="var(${col})" stroke-width="2.2" stroke-linejoin="round"/>`;
+    g+=`<circle class="fd" cx="${X(n-1)}" cy="${Y(last)}" r="4" fill="var(${col})"/>`;
     g+=`<text x="${P}" y="${H-2}" font-size="11" fill="var(--mute)">${esc(String(pts[0][0]).slice(5,10))}</text><text x="${W-10}" y="${H-2}" text-anchor="end" font-size="11" fill="var(--mute)">${esc(String(pts[n-1][0]).slice(5,10))} · ${sg(last)}</text>`;
   }
   return g+`</svg>`;
@@ -539,6 +576,7 @@ function labDemo(){ Object.assign(S.lab, JSON.parse(JSON.stringify(LAB_DEMO))); 
 async function labCargar(){
   const k = labClave(); if(LCARGA===k) return; LCARGA = k;
   const x = S.lab;
+  girando(1);
   try{
     const r = await api('lab', {entrada:x.e, maxn:x.m, av:x.a, tp:x.t, familia:x.fam||null, indice:x.ind||null, tfs:x.tfs,
       dir:x.dir?+x.dir:null, desde:x.desde||null, hasta:x.hasta||null, fuente:x.fuente||null, op:!LOP});
@@ -549,7 +587,22 @@ async function labCargar(){
     LB = r.lab; LB._k = k;
     if(S.tab==='lab') pintar();
   }catch(e){ LCARGA=''; if(e!=='sesión') toast('Sin conexión: '+e); }
+  finally{ girando(-1); }
 }
+// riesgo: el servidor calcula todo con $100; aqui se escalan los dolares (lineal, sin redondeo de lotes)
+const L_ESC = new Set(['r','ra','rb','dd','dp','ddp','gan','per','peor','mejor','res']);
+function labEsc(R,f){
+  if(f===1) return R;
+  const sc = o => { if(Array.isArray(o)) return o.map(sc);
+    if(o && typeof o==='object'){ const q={}; for(const k in o) q[k] = (L_ESC.has(k) && typeof o[k]==='number') ? Math.round(o[k]*f*100)/100 : sc(o[k]); return q; }
+    return o; };
+  const Q = sc(R);
+  Q.dia = (R.dia||[]).map(d=>[d[0], d[1]*f]);
+  Q.ult = (R.ult||[]).map(u=>{ const v=u.slice(); if(v[5]!=null) v[5]*=f; if(v[6]!=null) v[6]*=f; return v; });
+  return Q;
+}
+function labRies(v){ v=+v; if(!(v>0)){ toast('Pon un monto mayor que 0'); pintar(); return; } S.lab.riesgo=Math.min(v,1e6); guardar(); pintar(); }
+function labLimpiar(){ Object.assign(S.lab,{fam:'',ind:'',tfs:[],dir:'',desde:'',hasta:'',fuente:''}); guardar(); pintar(); toast('Filtros en blanco'); }
 function vLab(){
   const x = S.lab, k = labClave();
   if(!LB || LB._k!==k) labCargar();
@@ -560,12 +613,15 @@ function vLab(){
   const tfs = LOP ? LOP.tf.slice().sort((a,b)=>tfMin(a)-tfMin(b)) : ['M1','M2','M3','M4','M5','M6','M10','M12','M15','M20','M30','H1','H2','H3','H4'];
   const sel = (id,ops,v,t) => `<select class="${v?'on':''}" onchange="labSet('${id}',this.value)"><option value="">${t}</option>${ops.map(o=>`<option value="${esc(o[0])}" ${String(o[0])===String(v)?'selected':''}>${esc(o[1])}</option>`).join('')}</select>`;
   const esDemo = labClave()===JSON.stringify([1,5,1,40,'FlipX','',['M1','M2','M3','M4'],'','','','']);
-  let h = `<div class="card"><h3>Combinación <span class="r">${esDemo?'<span class="badge b-ok">Configuración de la demo</span>':`<button class="btn" onclick="labDemo()">Volver a la demo</button>`}</span></h3>
+  const rs = +x.riesgo>0 ? +x.riesgo : 100, fr = rs/100;
+  const nfil = (x.fam?1:0)+(x.ind?1:0)+(x.tfs.length?1:0)+(x.dir?1:0)+(x.desde?1:0)+(x.hasta?1:0)+(x.fuente?1:0);
+  let h = `<div class="card"><h3>Combinación <span class="r">${rs!==100?`<span class="badge b-y">Riesgo $${rs}</span>`:''}<button class="btn" onclick="labLimpiar()" ${nfil?'':'disabled'} title="Deja todos los filtros en blanco">Limpiar${nfil?' ('+nfil+')':''}</button>${esDemo?'<span class="badge b-ok">Configuración de la demo</span>':`<button class="btn" onclick="labDemo()">Volver a la demo</button>`}</span></h3>
     <div class="lctl">
       <div class="g"><span>Dónde entrar</span>${seg('',L_ENT.map((n,i)=>[i,n]),x.e,"labN.bind(null,'e')")}</div>
       <div class="g"><span>Entradas máximas</span>${seg('',[3,4,5,6].map(n=>[n,String(n)]),x.m,"labN.bind(null,'m')")}</div>
       <div class="g"><span>Gestionar hasta (nivel del SL)</span>${seg('',L_AV.map((n,i)=>[i,n]),x.a,"labN.bind(null,'a')")}</div>
       <div class="g"><span>TP</span>${seg('',[[40,'40%'],[45,'45%']],x.t,"labN.bind(null,'t')")}</div>
+      <div class="g"><span>Riesgo por escalera ($)</span><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input type="number" min="1" step="5" value="${rs}" style="width:90px" onchange="labRies(this.value)"><div class="chips"><button class="chip ${rs===100?'on':''}" onclick="labRies(100)">$100</button><button class="chip ${rs===65?'on':''}" onclick="labRies(65)">$65</button></div></div></div>
     </div>
     <div class="filtros" style="margin:14px 0 8px">
       ${sel('fam',fams.map(f=>[f,f]),x.fam,'Todas las familias')}
@@ -578,7 +634,7 @@ function vLab(){
     <div class="chips"><button class="chip ${x.tfs.length?'':'on'}" onclick="labTf('')">Todas las TF</button>${tfs.map(t=>`<button class="chip ${x.tfs.indexOf(t)>=0?'on':''}" onclick="labTf('${t}')">${t}</button>`).join('')}</div>
   </div>`;
   if(!LB){ $('vista').innerHTML = h + `<div class="card empty" style="margin-top:14px">Calculando…</div>`; return; }
-  const R = LB, K = R.k || {};
+  const R = labEsc(LB, fr), K = R.k || {};
   h += `<div id="labRes" class="${fresco?'':'cargando'}">`;
   if(!K.n){
     h += `<div class="card empty" style="margin-top:14px">${R.setups?`${R.setups} setups con estos filtros, pero ninguno entró con esta combinación.`:'No hay setups con estos filtros.'}</div>`;
@@ -606,7 +662,7 @@ function vLab(){
   }
   h += `<div class="card" style="margin-top:14px"><h3>Todas las combinaciones <span class="r">${seg('',[['r','Resultado'],['ef','Efectividad'],['pe','$ por escalera']],x.orden,"labN.bind(null,'orden')")}</span></h3>${labRanking(R)}</div>`;
   h += `<div class="card" style="margin-top:14px"><h3>Últimos setups <span class="r mute" style="font-size:12px">con esta combinación</span></h3>${labUlt(R.ult)}</div>`;
-  h += `<div class="nota">Cada setup se calcula por separado con $100 de riesgo (sin la regla de una escalera por índice), así que los totales son mayores que en la demo; sirve para comparar combinaciones. A = hasta el 15-oct, B = desde el 16-oct. Horas de Costa Rica.</div></div>`;
+  h += `<div class="nota">Cada setup se calcula por separado con $${rs} de riesgo${rs!==100?` (el servidor calcula a $100 y aquí se escala ×${fr.toFixed(2)}, sin redondear lotes)`:''}, sin la regla de una escalera por índice, así que los totales son mayores que en la demo; sirve para comparar combinaciones. A = hasta el 15-oct, B = desde el 16-oct. Horas de Costa Rica.</div></div>`;
   $('vista').innerHTML = h;
 }
 function labN(k,v){ S.lab[k] = (k==='orden') ? v : +v; guardar(); pintar(); }
@@ -676,8 +732,8 @@ function labCurva(dia){
   const iB = pts.findIndex(p=>p[0]>='2026-10-16');      // inicio de la mitad B
   if(iB>0) g+=`<line x1="${X(iB)}" x2="${X(iB)}" y1="10" y2="${H-20}" stroke="var(--mute)" stroke-dasharray="2 3"/><text x="${X(iB)+4}" y="20" font-size="11" fill="var(--mute)">B</text>`;
   const line=pts.map((p,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(p[1]).toFixed(1)).join(' ');
-  g+=`<path d="${line} L${X(n-1)} ${Y(0)} L${X(0)} ${Y(0)} Z" fill="var(${col})" opacity=".15"/><path d="${line}" fill="none" stroke="var(${col})" stroke-width="2" stroke-linejoin="round"/>`;
-  g+=`<circle cx="${X(n-1)}" cy="${Y(last)}" r="4" fill="var(${col})"/>`;
+  g+=`<path class="fd" d="${line} L${X(n-1)} ${Y(0)} L${X(0)} ${Y(0)} Z" fill="var(${col})" opacity=".15"/><path class="dr" pathLength="1" d="${line}" fill="none" stroke="var(${col})" stroke-width="2" stroke-linejoin="round"/>`;
+  g+=`<circle class="fd" cx="${X(n-1)}" cy="${Y(last)}" r="4" fill="var(${col})"/>`;
   g+=`<text x="${P}" y="${H-2}" font-size="11" fill="var(--mute)">${esc(pts[1][0].slice(5))}</text><text x="${W-10}" y="${H-2}" text-anchor="end" font-size="11" fill="var(--mute)">${esc(pts[n-1][0].slice(5))} · ${sg(last)}</text>`;
   return g+`</svg>`;
 }
@@ -759,7 +815,7 @@ async function guardarLic(i){
   if(i>=0){ await accLic(i,'editar',d); }
   else { try{ const r=await api('licencia',{acc:'nueva',d}); if(!r.ok){toast(r.msg);$('fG').disabled=false;return;} D.licencias=r.licencias; cerrar(); pintar(); toast('Licencia creada'); }catch(e){ toast('Error: '+e); } }
 }
-function modal(h){ $('modal').innerHTML=`<div class="modal" onclick="if(event.target===this)cerrar()"><div class="card">${h}</div></div>`; }
+function modal(h,w){ $('modal').innerHTML=`<div class="modal" onclick="if(event.target===this)cerrar()"><div class="card" ${w?`style="max-width:${w}px"`:''}>${h}</div></div>`; }
 function cerrar(){ $('modal').innerHTML=''; }
 
 // ---------------------------------------------------------------- AJUSTES
@@ -771,7 +827,10 @@ function vAj(){
   </div>
   <div class="card"><h3>Control de los EAs</h3>
     <div class="row"><div class="tx"><b>Pausa remota</b><span>Ninguna escalera nueva en todas las cuentas. Las abiertas se siguen administrando. Llega en máx. 5 min (EA Reporte).</span></div><button class="sw ${a.pausa?'on':''}" onclick="aj({pausa:${!a.pausa}})"></button></div>
-    <div class="row"><div class="tx"><b>Límite de pérdida diaria</b><span>Al perder esto en el día se pausan las escaleras nuevas hasta mañana. 0 = sin límite.</span></div>
+    <div class="row"><div class="tx"><b>Límite de pérdida diaria</b><span>Al perder esto en el día se pausan las escaleras nuevas hasta mañana. 0 = sin límite. Cada cuenta puede tener el suyo.</span></div></div>
+    ${D.cuentas.map(c=>{ const propio=(a.limites||{})[c.cuenta]!==undefined; return `<div class="row"><div class="tx"><b>${esc(c.cuenta)} · ${esc(c.modo)}</b><span>${propio?'Límite propio':'Usa el límite general'}</span></div>
+      <span style="display:flex;gap:6px;align-items:center">-$<input type="number" id="lim_${esc(c.cuenta)}" min="0" step="5" value="${limiteDe(c.cuenta)}" style="width:80px"><button class="btn" onclick="ajLim('${esc(c.cuenta)}')">Guardar</button>${propio?`<button class="btn" title="Volver al límite general" onclick="aj({limiteCuenta:{cuenta:'${esc(c.cuenta)}',valor:null}})">General</button>`:''}</span></div>`; }).join('')}
+    <div class="row"><div class="tx"><b>Límite general</b><span>Para las cuentas que no tienen uno propio.</span></div>
       <span style="display:flex;gap:6px;align-items:center">-$<input type="number" id="lim" min="0" step="5" value="${a.limite}" style="width:80px"><button class="btn" onclick="aj({limite:+$('lim').value})">Guardar</button></span></div>
   </div>
   <div class="card"><h3>Seguridad</h3>
@@ -788,6 +847,7 @@ function vAj(){
     ${D.cuentas.map(c=>`<div class="row"><div class="tx"><b>${esc(c.cuenta)} · ${esc(c.modo)}</b><span>${esc(c.servidor)} · último reporte ${esc(c.ultimo)} · Reporte v${esc(c.version)}</span></div><span class="dot ${c.hace>=0&&c.hace<=12?'g':'r'}"></span></div>`).join('')||'<div class="empty">Ninguna</div>'}
   </div></div>`;
 }
+function ajLim(c){ aj({limiteCuenta:{cuenta:c, valor:+$('lim_'+c).value}}); }
 function setTema(v){ S.tema=v; guardar(); tema(); pintar(); }
 async function aj(o){
   try{ const r=await api('ajustes',{o}); if(!r.ok){toast(r.msg);return;} D.ajustes=r.ajustes; pintar(); toast('Guardado'); }
