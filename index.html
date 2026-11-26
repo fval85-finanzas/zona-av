@@ -191,9 +191,9 @@ nav.bot{display:none}
 
 <script>
 // ---------------------------------------------------------------- configuracion
-const APP_VER = '2.6.1';
+const APP_VER = '2.7.0';
 const API = 'https://qehuvzutrbqgppfifapp.supabase.co/functions/v1/web';
-const VERS = {ESCALERA:'1.9.2', ESCANER:'1.9.2', FIBO:'0.6', REPORTE:'0.3'};   // ultimas versiones publicadas
+const VERS = {ESCALERA:'1.9.3', ESCANER:'1.9.3', FIBO:'0.6', REPORTE:'0.3'};   // ultimas versiones publicadas
 const TABS = [['dash','Dashboard','◧'],['est','Estadísticas','▤'],['lab','Laboratorio','⚗'],['lic','Licencias','⚿'],['cfg','Configuración','☰'],['aj','Ajustes','⚙']];
 
 // ---------------------------------------------------------------- estado
@@ -891,7 +891,9 @@ const slTx = v => { const o=SL_OP.find(x=>Math.abs(x[0]-v)<1e-6); return o?o[1]:
 const cpy = o => JSON.parse(JSON.stringify(o));
 function cfgDefecto(){
   const p=(fam,on,ent,mx,sl,tp,dd)=>({fam,on,ent,maxN:mx,minN:3,sl,tp,tfs:'M1,M2,M3,M4',et:1,dd,ddFrom:20,ddX:0.5});
-  return {riesgo:{capital:false,pct:100,fijo:100}, perfiles:[p('FlipX',true,1,5,-0.68,40,false),p('FX Vol',true,1,6,-1.0,45,true),p('',false,1,5,-0.68,40,false),p('',false,1,5,-0.68,40,false)]};
+  return {riesgo:{capital:false,pct:100,fijo:100}, perfiles:[p('FlipX',true,1,5,-0.68,40,false),p('FX Vol',true,1,6,-1.0,45,true),p('',false,1,5,-0.68,40,false),p('',false,1,5,-0.68,40,false)],
+    limites:{lim:200,maxEsc:2}, escaner:{excluir:'',solo:'FX Vol,PainX,GainX,FiboX',t2:true,t3:true,push:true,alert:true,sound:true,mute:false,abrirT3:true},
+    escalera:{mult:1.5,rel:1.0,micro:true,emerg:-2.236}};
 }
 function cfgNorm(d){
   const b=cfgDefecto(); if(!d) return b;
@@ -899,8 +901,13 @@ function cfgNorm(d){
   if(!(+r.fijo>0)) r.fijo=b.riesgo.fijo;
   const P=(d.perfiles||[]).slice(0,4).map(x=>Object.assign({}, b.perfiles[0], x));
   while(P.length<4) P.push(cpy(b.perfiles[3]));
-  return {riesgo:r, perfiles:P};
+  return {riesgo:r, perfiles:P, limites:Object.assign({}, b.limites, d.limites||{}), escaner:Object.assign({}, b.escaner, d.escaner||{}), escalera:Object.assign({}, b.escalera, d.escalera||{})};
 }
+// 2.7.0: que informa el EA (Escaner/Escalera 1.9.3); lo que no informa solo se envia si lo cambias
+function cfgTiene(c){ const e=c&&c.ea; return {L:!!(e&&e.limites), E:!!(e&&e.escaner), X:!!(e&&e.escalera)}; }
+const EMERG_OP=[[-1.618,'ÚLTIMA ZONA'],[-2.0,'ENGAÑO'],[-2.236,'NO FALLA']];
+const emTx = v => { const o=EMERG_OP.find(x=>Math.abs(x[0]-v)<1e-6); return o?o[1]+' ('+v+')':String(v); };
+const sinEsp = t => String(t||'').replace(/\s/g,'').toLowerCase();
 async function cfgCargar(forzar){
   if(!forzar && CFG && Date.now()-CFGT<60000) return;
   try{ const r=await api('config'); if(r&&r.ok){ CFG=r; CFGT=Date.now(); if(S.tab==='cfg') vCfg(); } else if(r) toast(r.msg||'Error'); }catch(e){}
@@ -958,6 +965,8 @@ function vCfg(){
     ${hayEA?'':'<div class="aviso">El EA de esta cuenta todavía no reporta su configuración. Instala y recompila el Escáner 1.9.2 (con el Reporte activado). Mientras, ves lo último enviado o los valores de fábrica.</div>'}
     ${base.perfiles.filter(p=>p.on&&p.fam).map(p=>`<div style="margin-top:10px"><b style="font-size:17px">${esc(p.fam)}</b><div class="tags">${perfTags(p).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div></div>`).join('')||'<div class="empty">Ningún perfil activo</div>'}
     <div style="margin-top:12px;font-size:14px">Riesgo por escalera: ${riesgoTx(base.riesgo, c.balance)}</div>
+    ${cfgTiene(c).L?`<div style="margin-top:4px;font-size:14px">Límite total: <b>${base.riesgo.capital?'riesgo × '+base.limites.maxEsc:$$(base.limites.lim)}</b> · máx. <b>${base.limites.maxEsc}</b> escalera(s) a la vez</div>`:''}
+    ${cfgTiene(c).E?`<div class="nota" style="margin-top:4px">Solo datos: ${esc(base.escaner.solo||'—')}${base.escaner.excluir?' · Excluidos: '+esc(base.escaner.excluir):''} · Avisos ${base.escaner.mute?'apagados':'encendidos'} · Abrir al T3: ${base.escaner.abrirT3?'sí':'no'}</div>`:''}
     ${est?`<div class="nota">${esc(est.s)}${c.app&&c.app.nombre?' · '+esc(c.app.nombre):''}</div>`:''}
     <button class="btn p" style="width:100%;padding:12px;margin-top:12px;font-size:15px" onclick="cfgEditar()">Editar</button>
   </div>
@@ -983,6 +992,7 @@ function cfgVolver(){ CV='inicio'; CE=null; vCfg(); window.scrollTo(0,0); }
 function cb(a,b){ return JSON.stringify(a)!==JSON.stringify(b) ? '<span class="cb">cambió</span>' : ''; }
 function stp(lbl, val, fnm, fnp){ return `<div class="stp"><span>${lbl}</span><span class="c"><button aria-label="Bajar ${lbl}" onclick="${fnm}">−</button><b>${val}</b><button aria-label="Subir ${lbl}" onclick="${fnp}">+</button></span></div>`; }
 function vCfgEditar(c){
+  if(!CE.perfiles[CP].fam){ const j=CE.perfiles.findIndex(x=>x.fam); if(j>=0) CP=j; }
   const p=CE.perfiles[CP], q=CB.perfiles[CP], r=CE.riesgo, rb=CB.riesgo;
   const fams=CE.perfiles.map((x,i)=>[i,x]).filter(([i,x])=>x.fam);
   const tfs=p.tfs.split(',');
@@ -990,8 +1000,9 @@ function vCfgEditar(c){
   <div><button class="btn" onclick="cfgVolver()">‹ Configuración</button></div>
   <div class="card"><h3>Editar · ${esc(String(c.modo).toUpperCase()==='REAL'?'Real':'Demo')} ${esc(c.cuenta)}</h3>
     <div class="mute" style="font-size:13px">Parte de lo que tiene puesto el EA y cambia lo que quieras. Lo que cambies sale marcado.</div>
-    ${fams.length>1?`<div class="ops" style="margin-top:12px">${fams.map(([i,x])=>`<button class="op ${i===CP?'on':''}" onclick="CP=${i};vCfg()">${esc(x.fam)}</button>`).join('')}</div>`:''}
+    <div class="ops" style="margin-top:12px">${fams.map(([i,x])=>`<button class="op ${i===CP?'on':''}" onclick="CP=${i};vCfg()">${esc(x.fam)}</button>`).join('')}${CE.perfiles.some(x=>!x.fam)?`<button class="op" onclick="cfgFamForm()">+ Nueva familia</button>`:''}</div>
     <div class="row"><div class="tx"><b>Perfil ${esc(p.fam)} activo ${cb(p.on,q.on)}</b><span>Apagado, ese perfil no se escanea ni opera.</span></div><button class="sw ${p.on?'on':''}" onclick="cfgP('on',${!p.on})"></button></div>
+    ${p.fam?`<button class="btn d" style="margin-top:6px" onclick="cfgFamQuitar()">Quitar la familia ${esc(p.fam)}</button>`:''}
   </div>
   <div class="card"><h3>Entrada automática ${cb(p.ent,q.ent)}</h3><div class="ops">${ENT_TX.map((t,i)=>`<button class="op ${p.ent===i?'on':''}" onclick="cfgP('ent',${i})">${t}</button>`).join('')}</div></div>
   <div class="card"><h3>Stop loss (SL) ${cb(p.sl,q.sl)}</h3><div class="ops">${SL_OP.map(([v,t])=>`<button class="op ${Math.abs(p.sl-v)<1e-6?'on':''}" onclick="cfgP('sl',${v})">${t}</button>`).join('')}</div></div>
@@ -1012,11 +1023,83 @@ function vCfgEditar(c){
     ${stp('Monto fijo', $$(+r.fijo,0), "cfgRN('fijo',-5,5,100000)", "cfgRN('fijo',5,5,100000)")}
     <div class="aviso" style="background:color-mix(in srgb,var(--blue) 12%,transparent)">${r.capital?`Con balance ${$$(c.balance)} la próxima escalera arriesgaría <b>${$$(c.balance*r.pct/100)}</b>. Si apagas el interruptor vuelve a <b>${$$(+r.fijo)}</b> fijos.`:`La próxima escalera arriesgaría <b>${$$(+r.fijo)}</b>.`}</div>
   </div>
+  ${cfgCardsExt(c)}
   <div class="card"><div class="fld"><label for="cfgNom">Nombre de esta configuración (opcional)</label><input id="cfgNom" type="text" maxlength="40" value="${esc(CNOM)}" oninput="CNOM=this.value"></div>
     <button class="btn p" style="width:100%;padding:12px;font-size:15px" onclick="cfgRevisar()">Revisar cambios</button>
     <button class="btn" style="width:100%;padding:10px;margin-top:8px" onclick="cfgPreGuardar()">Guardar como predeterminada</button>
   </div></div>`;
 }
+
+// ---------------------------------------------------------------- 2.7.0: limites, escaner y avisos, escalera avanzada, familias
+function cfgAvisos(c){
+  const r=CE.riesgo, L=CE.limites, out=[];
+  const riesgo = r.capital ? (c.balance||0)*r.pct/100 : +r.fijo;
+  const lim = (D&&D.ajustes) ? limiteDe(c.cuenta) : 0;
+  if(lim>0 && riesgo>lim) out.push(`El riesgo por escalera (${$$(riesgo)}) pasa el <b>límite diario</b> de esta cuenta (−${$$(lim,0)}): un SL pausa la cuenta el resto del día. Cámbialo arriba en Control de los EAs.`);
+  if(!r.capital && riesgo*L.maxEsc > L.lim+0.01) out.push(`Con ${L.maxEsc} escaleras de ${$$(riesgo)} el riesgo total sería ${$$(riesgo*L.maxEsc)} y pasa el <b>límite total</b> de ${$$(L.lim)}: ${L.maxEsc>1?'la última no entraría':'no entraría'}.`);
+  return out;
+}
+function cfgCardsExt(c){
+  const t=cfgTiene(c), L=CE.limites, Lb=CB.limites, E=CE.escaner, Eb=CB.escaner, X=CE.escalera, Xb=CB.escalera, r=CE.riesgo;
+  const sinDato = m => m ? '' : '<div class="nota">El EA todavía no informa estos valores (instala la 1.9.3). Si los cambias, se envían igual.</div>';
+  const av=cfgAvisos(c);
+  const sw=(lbl,sub,k,v,fn)=>`<div class="row"><div class="tx"><b>${lbl}</b>${sub?`<span>${sub}</span>`:''}</div><button class="sw ${v?'on':''}" onclick="${fn}('${k}',${!v})"></button></div>`;
+  return `<div class="card"><h3>Límites ${cb(L,Lb)}</h3>${sinDato(t.L)}
+    ${r.capital?`<div class="mute" style="font-size:13px">Con capital total el límite total es automático: riesgo × máximo de escaleras.</div>`:stp('Riesgo total máximo', $$(L.lim,0), "cfgLN('lim',-25,5,100000)", "cfgLN('lim',25,5,100000)")}
+    ${stp('Máximo de escaleras a la vez', L.maxEsc, "cfgLN('maxEsc',-1,1,10)", "cfgLN('maxEsc',1,1,10)")}
+    <div class="mute" style="font-size:13px">Límite de pérdida diaria de esta cuenta: <b>−${$$((D&&D.ajustes)?limiteDe(c.cuenta):0,0)}</b> (se cambia arriba, en Control de los EAs).</div>
+    ${av.map(a=>`<div class="aviso">${a}</div>`).join('')}
+  </div>
+  <div class="card"><h3>Escáner y avisos ${cb(E,Eb)}</h3>${sinDato(t.E)}
+    <div class="fld"><label for="cfgSolo">Familias solo de datos (mandan velas al Laboratorio; no se escanean ni operan)</label><input id="cfgSolo" type="text" value="${esc(E.solo)}" onchange="cfgES('solo',this.value)"></div>
+    <div class="fld"><label for="cfgExcl">Índices excluidos (nombre exacto, separados por comas)</label><input id="cfgExcl" type="text" value="${esc(E.excluir)}" placeholder="ej. FlipX 5" onchange="cfgES('excluir',this.value)"></div>
+    ${sw('Abrir la pestaña al toque 3','La Escalera necesita su pestaña para operar.','abrirT3',E.abrirT3,'cfgE')}
+    ${sw('Silenciar avisos','No suena ni notifica (igual quedan en Últimos avisos).','mute',E.mute,'cfgE')}
+    ${sw('Avisar en el toque 2','','t2',E.t2,'cfgE')}
+    ${sw('Avisar en el toque 3','','t3',E.t3,'cfgE')}
+    ${sw('Notificación al celular','App MetaTrader del celular.','push',E.push,'cfgE')}
+    ${sw('Ventana de alerta en MT5','','alert',E.alert,'cfgE')}
+    ${sw('Sonido','Si la ventana de alerta está apagada.','sound',E.sound,'cfgE')}
+  </div>
+  <div class="card"><h3>Escalera (avanzado) ${cb(X,Xb)}</h3>${sinDato(t.X)}
+    <div class="aviso">Cambia cómo se arma cada escalera. Los resultados del Laboratorio están medidos con multiplicador 1.50 y relación 1.0.</div>
+    ${stp('Multiplicador del lote', (+X.mult).toFixed(2), "cfgXN('mult',-0.05,1,5)", "cfgXN('mult',0.05,1,5)")}
+    ${stp('Relación DD/TP por nivel', (+X.rel).toFixed(2), "cfgXN('rel',-0.05,0.3,5)", "cfgXN('rel',0.05,0.3,5)")}
+    ${sw('Microlote','Permite lotes menores al mínimo del índice.','micro',X.micro,'cfgX')}
+    <div style="margin-top:8px"><b>Stop de emergencia en el broker</b><div class="ops">${EMERG_OP.map(([v,tx])=>`<button class="op ${Math.abs(X.emerg-v)<1e-6?'on':''}" onclick="cfgX('emerg',${v})">${tx}</button>`).join('')}</div></div>
+  </div>`;
+}
+function cfgLN(k,d,a,b){ const L=CE.limites; L[k]=Math.min(b,Math.max(a,(+L[k])+d)); vCfg(); }
+function cfgE(k,v){ CE.escaner[k]=v; vCfg(); }
+function cfgES(k,v){ CE.escaner[k]=String(v).split(',').map(x=>x.trim()).filter(x=>x).join(','); vCfg(); }
+function cfgX(k,v){ CE.escalera[k]=v; vCfg(); }
+function cfgXN(k,d,a,b){ const X=CE.escalera; X[k]=Math.round(Math.min(b,Math.max(a,(+X[k])+d))*100)/100; vCfg(); }
+function cfgFamForm(){
+  modal(`<h3>Nueva familia</h3><p class="mute" style="font-size:13px">El nombre es el inicio del nombre de los índices (ej. <b>PainX</b> toma PainX 400, PainX 600…). Agrégalos a Observación de Mercado en MT5.</p>
+    <div class="fld"><label for="famN">Nombre</label><input id="famN" type="text" maxlength="20" placeholder="PainX"></div>
+    <div class="acts"><button class="btn" onclick="cerrar()">Cancelar</button><button class="btn p" onclick="cfgFamNueva()">Agregar</button></div>`);
+  setTimeout(()=>$('famN')&&$('famN').focus(),50);
+}
+function cfgFamNueva(){
+  const nom=($('famN').value||'').replace(/[;|",\\]/g,'').trim().slice(0,20);
+  if(!nom) return toast('Escribe el nombre');
+  if(CE.perfiles.some(x=>x.fam && sinEsp(x.fam)===sinEsp(nom))) return toast('Esa familia ya existe');
+  const i=CE.perfiles.findIndex(x=>!x.fam); if(i<0) return toast('Ya hay 4 familias');
+  CE.perfiles[i]={fam:nom,on:true,ent:1,maxN:5,minN:3,sl:-0.68,tp:40,tfs:'M1,M2,M3,M4',et:1,dd:false,ddFrom:20,ddX:0.5};
+  const solo=(CE.escaner.solo||'').split(',').filter(x=>x.trim() && sinEsp(x)!==sinEsp(nom));
+  CE.escaner.solo=solo.join(',');
+  CP=i; cerrar(); vCfg(); toast('Familia '+nom+' agregada: ajusta su configuración');
+}
+function cfgFamQuitar(){
+  const p=CE.perfiles[CP];
+  modal(`<h3>Quitar familia</h3><p>¿Quitar <b>${esc(p.fam)}</b>? Sus índices dejan de escanearse y operarse (las escaleras abiertas siguen hasta cerrar).</p>
+    <div class="acts"><button class="btn" onclick="cerrar()">Cancelar</button><button class="btn p" style="background:var(--red);border-color:var(--red)" onclick="cfgFamQuitarOk()">Quitar</button></div>`);
+}
+function cfgFamQuitarOk(){
+  CE.perfiles[CP]={fam:'',on:false,ent:1,maxN:5,minN:3,sl:-0.68,tp:40,tfs:'M1,M2,M3,M4',et:1,dd:false,ddFrom:20,ddX:0.5};
+  const j=CE.perfiles.findIndex(x=>x.fam); CP=j>=0?j:0; cerrar(); vCfg();
+}
+
 function cfgP(k,v){ CE.perfiles[CP][k]=v; vCfg(); }
 function cfgN(k,d,a,b){ const p=CE.perfiles[CP]; p[k]=Math.round(Math.min(b,Math.max(a,(+p[k])+d))*100)/100; if(k==='maxN'&&p.minN>p.maxN) p.minN=p.maxN; vCfg(); }
 function cfgR(k,v){ CE.riesgo[k]=v; vCfg(); }
@@ -1024,7 +1107,9 @@ function cfgRN(k,d,a,b){ const r=CE.riesgo; r[k]=Math.min(b,Math.max(a,(+r[k])+d
 function cfgTf(t){ const p=CE.perfiles[CP]; let L=p.tfs.split(',').filter(x=>x); L=L.includes(t)?L.filter(x=>x!==t):L.concat(t); if(!L.length) return toast('Deja al menos una temporalidad'); p.tfs=TF_OP.filter(x=>L.includes(x)).concat(L.filter(x=>!TF_OP.includes(x))).join(','); vCfg(); }
 function cfgDifs(){
   const out=[], r=CE.riesgo, rb=CB.riesgo;
-  CE.perfiles.forEach((p,i)=>{ const q=CB.perfiles[i]; if(!p.fam) return; const f=p.fam+' · ';
+  CE.perfiles.forEach((p,i)=>{ const q=CB.perfiles[i];
+    if(p.fam!==q.fam){ if(!p.fam){ out.push(['Familia', q.fam, 'quitada']); return; } out.push(['Familia', q.fam||'—', p.fam]); }
+    if(!p.fam) return; const f=p.fam+' · ';
     if(p.on!==q.on) out.push([f+'Activo', q.on?'sí':'no', p.on?'sí':'no']);
     if(p.ent!==q.ent) out.push([f+'Entrada', ENT_TX[q.ent], ENT_TX[p.ent]]);
     if(Math.abs(p.sl-q.sl)>1e-6) out.push([f+'SL', slTx(q.sl), slTx(p.sl)]);
@@ -1038,6 +1123,17 @@ function cfgDifs(){
   if(r.capital!==rb.capital) out.push(['Capital total', rb.capital?'activado':'apagado', r.capital?'activado':'apagado']);
   if(r.pct!==rb.pct) out.push(['% del balance', (+rb.pct).toFixed(0)+'%', (+r.pct).toFixed(0)+'%']);
   if(r.fijo!==rb.fijo) out.push(['Monto fijo', $$(+rb.fijo), $$(+r.fijo)]);
+  const L=CE.limites, Lb=CB.limites, E=CE.escaner, Eb=CB.escaner, X=CE.escalera, Xb=CB.escalera, sn=v=>v?'sí':'no';
+  if(L.lim!==Lb.lim) out.push(['Riesgo total máximo', $$(+Lb.lim,0), $$(+L.lim,0)]);
+  if(L.maxEsc!==Lb.maxEsc) out.push(['Máximo de escaleras', Lb.maxEsc, L.maxEsc]);
+  if(E.solo!==Eb.solo) out.push(['Familias solo datos', Eb.solo||'—', E.solo||'—']);
+  if(E.excluir!==Eb.excluir) out.push(['Índices excluidos', Eb.excluir||'—', E.excluir||'—']);
+  [['abrirT3','Abrir al toque 3'],['mute','Silenciar avisos'],['t2','Aviso toque 2'],['t3','Aviso toque 3'],['push','Notificación al celular'],['alert','Ventana de alerta'],['sound','Sonido']]
+    .forEach(([k,t])=>{ if(!!E[k]!==!!Eb[k]) out.push([t, sn(Eb[k]), sn(E[k])]); });
+  if(X.mult!==Xb.mult) out.push(['Multiplicador', (+Xb.mult).toFixed(2), (+X.mult).toFixed(2)]);
+  if(X.rel!==Xb.rel) out.push(['Relación DD/TP', (+Xb.rel).toFixed(2), (+X.rel).toFixed(2)]);
+  if(!!X.micro!==!!Xb.micro) out.push(['Microlote', sn(Xb.micro), sn(X.micro)]);
+  if(X.emerg!==Xb.emerg) out.push(['Stop de emergencia', emTx(Xb.emerg), emTx(X.emerg)]);
   return out;
 }
 function cfgRevisar(){ CCTAS={}; CCTAS[S.cfgCta]=true; CV='confirmar'; vCfg(); window.scrollTo(0,0); }
@@ -1050,7 +1146,8 @@ function vCfgConfirmar(c){
   <div class="card"><h3>Revisar cambios · ${esc(String(c.modo).toUpperCase()==='REAL'?'Real':'Demo')} ${esc(c.cuenta)}</h3>
     ${CNOM?`<div style="font-weight:700;margin-bottom:6px">${esc(CNOM)}</div>`:''}
     ${df.length?df.map(([k,a,b])=>`<div class="dif"><span>${esc(k)}</span><span><s>${esc(a)}</s> → <b>${esc(b)}</b></span></div>`).join(''):'<div class="empty">Sin cambios respecto a lo que tiene el EA. Puedes enviarla igual para fijarla desde la app.</div>'}
-    ${r.capital?`<div class="aviso">Con el capital total activado, un SL puede dejar la cuenta casi en cero.${lim>0?` El límite diario de esta cuenta es −${$$(lim,0)}: si el riesgo pasa de ahí, súbelo en Ajustes.`:''}</div>`:''}
+    ${r.capital?`<div class="aviso">Con el capital total activado, un SL puede dejar la cuenta casi en cero.</div>`:''}
+    ${cfgAvisos(c).map(a=>`<div class="aviso">${a}</div>`).join('')}
     <div class="aviso" style="background:var(--card2)">Se aplica a la <b>siguiente</b> escalera; la abierta no cambia.</div>
     ${otras.map(k=>`<label style="display:flex;align-items:center;gap:12px;min-height:44px;margin-top:8px;font-size:14px"><input type="checkbox" style="width:22px;height:22px" ${CCTAS[k.cuenta]?'checked':''} onchange="CCTAS['${esc(k.cuenta)}']=this.checked"> Aplicar también en la ${esc(String(k.modo).toUpperCase()==='REAL'?'real':'demo')} (${esc(k.cuenta)})</label>`).join('')}
     <button id="cfgEnv" class="btn p" style="width:100%;padding:13px;margin-top:12px;font-size:15px" onclick="cfgEnviar()">Confirmar y enviar</button>
@@ -1061,7 +1158,11 @@ async function cfgEnviar(){
   const b=$('cfgEnv'); if(b){ b.disabled=true; b.textContent='Enviando…'; }
   const cuentas=Object.keys(CCTAS).filter(k=>CCTAS[k]);
   try{
-    const r=await api('config_guardar',{cuentas, datos:CE, nombre:CNOM});
+    const c=cfgCta(), t=cfgTiene(c), datos=cpy(CE);
+    if(!t.L && JSON.stringify(CE.limites)===JSON.stringify(CB.limites)) delete datos.limites;
+    if(!t.E && JSON.stringify(CE.escaner)===JSON.stringify(CB.escaner)) delete datos.escaner;
+    if(!t.X && JSON.stringify(CE.escalera)===JSON.stringify(CB.escalera)) delete datos.escalera;
+    const r=await api('config_guardar',{cuentas, datos, nombre:CNOM});
     if(!r.ok){ toast(r.msg||'Error'); if(b){ b.disabled=false; b.textContent='Confirmar y enviar'; } return; }
     CFG=r; CFGT=Date.now(); BIT=null; CV='inicio'; CE=null; vCfg(); window.scrollTo(0,0);
     toast('Enviado. El EA lo toma en unos 5 minutos.');
