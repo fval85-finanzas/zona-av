@@ -119,8 +119,9 @@ nav.bot{display:none}
 @media(max-width:820px){
  nav.side{display:none}
  main{padding:14px 12px 90px}
- nav.bot{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);z-index:40;padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
- nav.bot .nb{flex:1;flex-direction:column;gap:2px;font-size:11px;padding:6px 2px;text-align:center;align-items:center}
+ nav.bot{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);z-index:40;padding:6px 4px calc(6px + env(safe-area-inset-bottom));overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+ nav.bot::-webkit-scrollbar{display:none}
+ nav.bot .nb{flex:1 0 74px;flex-direction:column;gap:2px;font-size:11px;padding:6px 2px;text-align:center;align-items:center;white-space:nowrap}
  nav.bot .nb i{font-style:normal;font-size:18px}
  .top h1{font-size:20px}
  .kpi .v{font-size:19px}
@@ -147,6 +148,24 @@ nav.bot{display:none}
 .an .bar{animation:ancho .7s ease-out}
 .an .hm div:not(.lb){animation:aparece .6s ease-out both}
 .cd.ck{cursor:pointer}.cd.ck:hover{border-color:var(--blue)}
+.cfg-cur{border:2px solid var(--blue)}
+.cfg-k{font-size:12px;font-weight:700;color:var(--blue);letter-spacing:.3px}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.tag{font-size:12px;font-weight:600;padding:4px 9px;border-radius:7px;background:color-mix(in srgb,var(--blue) 14%,transparent);color:var(--blue)}
+.pre{display:grid;gap:10px}
+.prc{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;gap:10px;align-items:center}
+.prc .tx{flex:1;min-width:0}.prc .tx b{display:block;font-size:15px}.prc .tx span{display:block;font-size:12px;color:var(--mute)}
+.ops{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.op{min-height:42px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--card);font-weight:600;cursor:pointer}
+.op.on{border:2px solid var(--blue);background:color-mix(in srgb,var(--blue) 14%,var(--card));color:var(--blue)}
+.stp{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0}
+.stp .c{display:flex;align-items:center;gap:8px}
+.stp .c button{width:42px;height:42px;border-radius:10px;border:1px solid var(--line);background:var(--card);font-size:20px;cursor:pointer}
+.stp .c b{min-width:58px;text-align:center;font-size:17px}
+.cb{font-size:11px;font-weight:700;color:var(--gold);background:color-mix(in srgb,var(--gold) 18%,transparent);border-radius:99px;padding:2px 8px;margin-left:6px}
+.dif{display:flex;justify-content:space-between;gap:8px;padding:10px 0;border-top:1px solid var(--line);font-size:14px}
+.dif s{color:var(--mute)}.dif b{color:var(--blue)}
+.aviso{background:color-mix(in srgb,var(--gold) 16%,transparent);border-radius:10px;padding:10px 12px;font-size:13px;margin-top:10px}
 @media(prefers-reduced-motion:reduce){.an .dr,.an .fd,.an .bb,.an .bar,.an .hm div{animation:none!important;stroke-dasharray:none!important;stroke-dashoffset:0!important}.gira .gi{animation:none}}
 </style>
 </head>
@@ -172,10 +191,10 @@ nav.bot{display:none}
 
 <script>
 // ---------------------------------------------------------------- configuracion
-const APP_VER = '2.5.0';
+const APP_VER = '2.6.0';
 const API = 'https://qehuvzutrbqgppfifapp.supabase.co/functions/v1/web';
-const VERS = {ESCALERA:'1.9.1', ESCANER:'1.9.0', FIBO:'0.6', REPORTE:'0.3'};   // ultimas versiones publicadas
-const TABS = [['dash','Dashboard','◧'],['est','Estadísticas','▤'],['lab','Laboratorio','⚗'],['lic','Licencias','⚿'],['aj','Ajustes','⚙']];
+const VERS = {ESCALERA:'1.9.2', ESCANER:'1.9.2', FIBO:'0.6', REPORTE:'0.3'};   // ultimas versiones publicadas
+const TABS = [['dash','Dashboard','◧'],['est','Estadísticas','▤'],['lab','Laboratorio','⚗'],['lic','Licencias','⚿'],['cfg','Configuración','☰'],['aj','Ajustes','⚙']];
 
 // ---------------------------------------------------------------- estado
 let D = null;                                 // datos del servidor
@@ -327,11 +346,11 @@ async function cargar(recien, silencioso){
     if(recien && D.rol!=='lab' && pkSoporta() && !marca('zavpk')) ofrecerHuella();
   }catch(e){ if(e==='sesión') return; if(!D) verLogin('Sin conexión: '+e); else toast('Sin conexión: '+e); }
 }
-setInterval(()=>{ if(D && !document.hidden && !$('modal').innerHTML) cargar(false,true); }, 60000);
+setInterval(()=>{ if(D && !document.hidden && !$('modal').innerHTML && !(S.tab==='cfg' && CV!=='inicio')) cargar(false,true); }, 60000);
 document.addEventListener('visibilitychange', ()=>{ if(D && !document.hidden) cargar(false,true); });
 function girando(d){ GIRO=Math.max(0,GIRO+d); const b=$('bAct'); if(b) b.classList.toggle('gira',GIRO>0); }
 async function actualizar(){
-  const t0=Date.now(); girando(1); LB=null; LCARGA=''; BIT=null;
+  const t0=Date.now(); girando(1); LB=null; LCARGA=''; BIT=null; CFG=null;
   try{ await cargar(); } finally{ setTimeout(()=>girando(-1), Math.max(0,700-(Date.now()-t0))); }
 }
 
@@ -348,7 +367,7 @@ async function agregarHuella(){
   }catch(e){ toast(e&&e.name==='NotAllowedError'?'Cancelado':(e&&e.name==='InvalidStateError'?'Este dispositivo ya estaba registrado':'Error: '+(e&&e.message||e))); }
 }
 
-function ir(t){ S.tab=t; S.selLic=-1; guardar(); pintar(); window.scrollTo(0,0); }
+function ir(t){ if(t==='cfg' && S.tab!=='cfg'){ CV='inicio'; CE=null; } S.tab=t; S.selLic=-1; guardar(); pintar(); window.scrollTo(0,0); }
 function tabsVis(){ return (D && D.rol==='lab') ? TABS.filter(t=>t[0]==='lab') : TABS; }
 function menu(){
   const b = tabsVis().map(([k,n,i])=>`<button class="nb ${S.tab===k?'on':''}" onclick="ir('${k}')"><i>${i}</i>${n}</button>`).join('');
@@ -367,12 +386,12 @@ function pintar(){
   $('titulo').textContent = TABS.find(t=>t[0]===S.tab)[1];
   const c = cta();
   const on = $('online');
-  $('selCta').style.display = (inv||S.tab==='lic'||S.tab==='aj'||S.tab==='lab') ? 'none':'';
-  on.style.display = inv ? 'none' : '';
+  $('selCta').style.display = (inv||S.tab==='lic'||S.tab==='aj'||S.tab==='lab'||S.tab==='cfg') ? 'none':'';
+  on.style.display = (inv||S.tab==='cfg') ? 'none' : '';
   if(!c){ on.innerHTML='<span class="dot"></span>Sin reportes'; }
   else if(c.hace>=0 && c.hace<=12) on.innerHTML=`<span class="dot g"></span>EA conectado · hace ${c.hace} min`;
   else on.innerHTML=`<span class="dot r"></span>Sin reporte desde ${esc(c.ultimo)}`;
-  ({dash:vDash, est:vEst, lab:vLab, lic:vLic, aj:vAj})[S.tab]();
+  ({dash:vDash, est:vEst, lab:vLab, lic:vLic, cfg:vCfg, aj:vAj})[S.tab]();
 }
 
 // ---------------------------------------------------------------- DASHBOARD
@@ -863,8 +882,204 @@ function vAj(){
     ${D.cuentas.map(c=>`<div class="row"><div class="tx"><b>${esc(c.cuenta)} · ${esc(c.modo)}</b><span>${esc(c.servidor)} · último reporte ${esc(c.ultimo)} · Reporte v${esc(c.version)}</span></div><span class="dot ${c.hace>=0&&c.hace<=12?'g':'r'}"></span></div>`).join('')||'<div class="empty">Ninguna</div>'}
   </div></div>`;
 }
+
+// ---------------------------------------------------------------- CONFIGURACION (2.6.0): Escaner y Escalera desde la app
+let CFG=null, CFGT=0, CV='inicio', CE=null, CB=null, CP=0, CNOM='', CCTAS={};
+const ENT_TX=['EMA30','EMA50','EMA100','0 del Fibo'];
+const SL_OP=[[-0.38,'AV1'],[-0.68,'AV2'],[-1.0,'AV3']];
+const TF_OP=['M1','M2','M3','M4','M5','M6','M10','M15'];
+const ET_TX={1:'1',2:'2',0:'AUTO'};
+// configuraciones fijas (perfil FlipX). Referencia: cartera simulada del año ($65, una escalera a la vez)
+const PRE_FIJAS=[
+  {id:'actual', nombre:'Actual', perfil:{ent:1,maxN:5,minN:3,sl:-0.68,tp:40,tfs:'M1,M2,M3,M4',et:1,dd:false,ddFrom:20,ddX:0.5}, ref:'Simulado en el año: ganó +$727 · tocó el SL 24 veces'},
+  {id:'candidata', nombre:'Candidata', perfil:{ent:2,maxN:4,minN:3,sl:-0.68,tp:45,tfs:'M1,M2,M3,M4',et:1,dd:false,ddFrom:20,ddX:0.5}, ref:'Simulado en el año: ganó +$1,060 · tocó el SL 29 veces'}
+];
+const slTx = v => { const o=SL_OP.find(x=>Math.abs(x[0]-v)<1e-6); return o?o[1]:String(v); };
+const cpy = o => JSON.parse(JSON.stringify(o));
+function cfgDefecto(){
+  const p=(fam,on,ent,mx,sl,tp,dd)=>({fam,on,ent,maxN:mx,minN:3,sl,tp,tfs:'M1,M2,M3,M4',et:1,dd,ddFrom:20,ddX:0.5});
+  return {riesgo:{capital:false,pct:100,fijo:100}, perfiles:[p('FlipX',true,1,5,-0.68,40,false),p('FX Vol',true,1,6,-1.0,45,true),p('',false,1,5,-0.68,40,false),p('',false,1,5,-0.68,40,false)]};
+}
+function cfgNorm(d){
+  const b=cfgDefecto(); if(!d) return b;
+  const r=Object.assign({}, b.riesgo, d.riesgo||{});
+  if(!(+r.fijo>0)) r.fijo=b.riesgo.fijo;
+  const P=(d.perfiles||[]).slice(0,4).map(x=>Object.assign({}, b.perfiles[0], x));
+  while(P.length<4) P.push(cpy(b.perfiles[3]));
+  return {riesgo:r, perfiles:P};
+}
+async function cfgCargar(forzar){
+  if(!forzar && CFG && Date.now()-CFGT<60000) return;
+  try{ const r=await api('config'); if(r&&r.ok){ CFG=r; CFGT=Date.now(); if(S.tab==='cfg') vCfg(); } else if(r) toast(r.msg||'Error'); }catch(e){}
+}
+function cfgCta(){
+  if(!CFG) return null;
+  if(!S.cfgCta || !CFG.cuentas.find(c=>c.cuenta===S.cfgCta)) S.cfgCta=(CFG.cuentas.find(c=>String(c.modo).toUpperCase()==='REAL')||CFG.cuentas[0]||{}).cuenta||'';
+  return CFG.cuentas.find(c=>c.cuenta===S.cfgCta)||null;
+}
+// lo que tiene puesto el EA (si ya reporta con el Escaner 1.9.2); si no, lo ultimo enviado o los valores de fabrica
+function cfgBase(c){ return cfgNorm(c&&c.ea&&c.ea.perfiles&&c.ea.perfiles.length ? c.ea : (c&&c.app ? c.app.datos : null)); }
+function cfgEstado(c){
+  if(!c||!c.app) return null;
+  if(c.app.aplicado_version>=c.app.version || (c.eav!=null && c.eav>=c.app.version)) return {ok:true, t:'Aplicado', s:'Aplicado '+(c.app.aplicado||c.app.actualizado)};
+  return {ok:false, t:'Pendiente', s:'Enviado '+c.app.actualizado+' · el EA lo toma en unos 5 min'};
+}
+function perfTags(p){ return [ENT_TX[p.ent]||'?', p.maxN+' entradas', 'SL '+slTx(p.sl), 'TP '+(+p.tp).toFixed(0)+'%', p.tfs.replace(/,/g,' '), 'ET '+(ET_TX[p.et]??p.et)].concat(p.dd?['TP x DD']:[]); }
+function riesgoTx(r, bal){
+  if(r.capital) return `<b>capital total ${(+r.pct).toFixed(0)}%</b>${bal!=null?` = ${$$(bal*r.pct/100)}`:''}`;
+  return `<b>monto fijo ${$$(+r.fijo)}</b> · Capital total: apagado`;
+}
+function resumenPre(p){ return `${ENT_TX[p.ent]} · ${p.maxN} entradas · ${slTx(p.sl)} · TP ${(+p.tp).toFixed(0)}%`; }
+function mismoPerfil(a,b){ return a.ent===b.ent && a.maxN===b.maxN && Math.abs(a.sl-b.sl)<1e-6 && Math.abs(a.tp-b.tp)<1e-6 && a.minN===b.minN && a.et===b.et && !!a.dd===!!b.dd; }
+function idxFam(D2, fam){ const i=D2.perfiles.findIndex(p=>p.on && p.fam && p.fam.toLowerCase()===fam.toLowerCase()); return i>=0?i:0; }
+
+function vCfg(){
+  if(!CFG){ setTimeout(()=>cfgCargar(),0); $('vista').innerHTML='<div class="card"><div class="empty">Cargando configuración…</div></div>'; return; }
+  if(Date.now()-CFGT>=60000 && CV==='inicio') setTimeout(()=>cfgCargar(true),0);
+  const c=cfgCta();
+  if(!c){ $('vista').innerHTML='<div class="card"><div class="empty">Ninguna cuenta reporta todavía.</div></div>'; return; }
+  if(CV==='editar' && CE) return vCfgEditar(c);
+  if(CV==='confirmar' && CE) return vCfgConfirmar(c);
+  CV='inicio';
+  const base=cfgBase(c), est=cfgEstado(c), hayEA=!!(c.ea&&c.ea.perfiles&&c.ea.perfiles.length);
+  const fl=base.perfiles[idxFam(base,'FlipX')];
+  const preU=(CFG.presets||[]);
+  const tarjetaPre=(x,fija)=>{ const p=Object.assign({}, fl, x.perfil); const uso=mismoPerfil(fl,p) && (!x.riesgo || (x.riesgo.capital===base.riesgo.capital));
+    return `<div class="prc"><div class="tx"><b>${esc(x.nombre)}</b><span>${esc(resumenPre(p))}${x.riesgo?' · riesgo '+(x.riesgo.capital?'capital total '+(+x.riesgo.pct).toFixed(0)+'%':'fijo '+$$(+x.riesgo.fijo)):''}</span>${x.ref?`<span>${esc(x.ref)}</span>`:''}</div>
+      ${uso?'<span class="badge b-ok">En uso</span>':`<button class="btn p" onclick="cfgUsar('${fija?x.id:'u'+x.id}')">Usar</button>`}${fija?'':`<button class="btn d" title="Quitar" onclick="cfgPreQuitar(${x.id})">✕</button>`}</div>`; };
+  $('vista').innerHTML = `<div class="grid" style="max-width:760px">
+  <div class="card">
+    <div class="seg" style="display:flex;width:100%">${CFG.cuentas.map(k=>`<button style="flex:1;padding:9px" class="${k.cuenta===c.cuenta?'on':''}" onclick="cfgSetCta('${esc(k.cuenta)}')">${esc(String(k.modo).toUpperCase()==='REAL'?'Real':'Demo')} · ${esc(k.cuenta)}</button>`).join('')}</div>
+    <div class="mute" style="font-size:13px;margin-top:10px;display:flex;align-items:center;gap:8px"><span class="dot ${c.hace>=0&&c.hace<=12?'g':'r'}"></span>${c.hace>=0&&c.hace<=12?'EA conectado · hace '+c.hace+' min':'Sin reporte hace '+c.hace+' min'} · Balance ${$$(c.balance)}</div>
+  </div>
+  <div class="card cfg-cur">
+    <h3><span class="cfg-k">EN USO AHORA</span><span class="r">${est?`<span class="badge ${est.ok?'b-ok':'b-y'}">${est.t}</span>`:''}</span></h3>
+    ${hayEA?'':'<div class="aviso">El EA de esta cuenta todavía no reporta su configuración. Instala y recompila el Escáner 1.9.2 (con el Reporte activado). Mientras, ves lo último enviado o los valores de fábrica.</div>'}
+    ${base.perfiles.filter(p=>p.on&&p.fam).map(p=>`<div style="margin-top:10px"><b style="font-size:17px">${esc(p.fam)}</b><div class="tags">${perfTags(p).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div></div>`).join('')||'<div class="empty">Ningún perfil activo</div>'}
+    <div style="margin-top:12px;font-size:14px">Riesgo por escalera: ${riesgoTx(base.riesgo, c.balance)}</div>
+    ${est?`<div class="nota">${esc(est.s)}${c.app&&c.app.nombre?' · '+esc(c.app.nombre):''}</div>`:''}
+    <button class="btn p" style="width:100%;padding:12px;margin-top:12px;font-size:15px" onclick="cfgEditar()">Editar</button>
+  </div>
+  <div class="card"><h3>Configuraciones predeterminadas <span class="r mute" style="font-size:12px">se aplican al perfil FlipX</span></h3>
+    <div class="pre">${PRE_FIJAS.map(x=>tarjetaPre(x,true)).join('')}${preU.map(x=>tarjetaPre({id:x.id,nombre:x.nombre,perfil:x.datos.perfil,riesgo:x.datos.riesgo},false)).join('')}
+    ${preU.length?'':'<div class="prc" style="border-style:dashed"><div class="tx"><b>Mis configuraciones</b><span>Aún no guardaste ninguna. Se crean desde Editar.</span></div></div>'}</div>
+    <div class="nota">Los cambios se aplican a la <b>siguiente</b> escalera, no a la abierta. El EA los recibe en unos 5 minutos (con el MT5 abierto y conectado).</div>
+  </div></div>`;
+}
+function cfgSetCta(k){ S.cfgCta=k; guardar(); CV='inicio'; CE=null; vCfg(); }
+function cfgEditar(pre){
+  const c=cfgCta(); CB=cfgBase(c); CE=cpy(CB); CNOM='';
+  CP=idxFam(CE,'FlipX');
+  if(pre){ Object.assign(CE.perfiles[CP], pre.perfil); if(pre.riesgo) CE.riesgo=Object.assign({}, CE.riesgo, pre.riesgo); CNOM=pre.nombre||''; }
+  CV='editar'; vCfg(); window.scrollTo(0,0);
+}
+function cfgUsar(id){
+  let pre=PRE_FIJAS.find(x=>x.id===id);
+  if(!pre){ const u=(CFG.presets||[]).find(x=>'u'+x.id===id); if(u) pre={nombre:u.nombre, perfil:u.datos.perfil, riesgo:u.datos.riesgo}; }
+  if(pre) cfgEditar(pre);
+}
+function cfgVolver(){ CV='inicio'; CE=null; vCfg(); window.scrollTo(0,0); }
+function cb(a,b){ return JSON.stringify(a)!==JSON.stringify(b) ? '<span class="cb">cambió</span>' : ''; }
+function stp(lbl, val, fnm, fnp){ return `<div class="stp"><span>${lbl}</span><span class="c"><button aria-label="Bajar ${lbl}" onclick="${fnm}">−</button><b>${val}</b><button aria-label="Subir ${lbl}" onclick="${fnp}">+</button></span></div>`; }
+function vCfgEditar(c){
+  const p=CE.perfiles[CP], q=CB.perfiles[CP], r=CE.riesgo, rb=CB.riesgo;
+  const fams=CE.perfiles.map((x,i)=>[i,x]).filter(([i,x])=>x.fam);
+  const tfs=p.tfs.split(',');
+  $('vista').innerHTML = `<div class="grid" style="max-width:760px">
+  <div><button class="btn" onclick="cfgVolver()">‹ Configuración</button></div>
+  <div class="card"><h3>Editar · ${esc(String(c.modo).toUpperCase()==='REAL'?'Real':'Demo')} ${esc(c.cuenta)}</h3>
+    <div class="mute" style="font-size:13px">Parte de lo que tiene puesto el EA y cambia lo que quieras. Lo que cambies sale marcado.</div>
+    ${fams.length>1?`<div class="ops" style="margin-top:12px">${fams.map(([i,x])=>`<button class="op ${i===CP?'on':''}" onclick="CP=${i};vCfg()">${esc(x.fam)}</button>`).join('')}</div>`:''}
+    <div class="row"><div class="tx"><b>Perfil ${esc(p.fam)} activo ${cb(p.on,q.on)}</b><span>Apagado, ese perfil no se escanea ni opera.</span></div><button class="sw ${p.on?'on':''}" onclick="cfgP('on',${!p.on})"></button></div>
+  </div>
+  <div class="card"><h3>Entrada automática ${cb(p.ent,q.ent)}</h3><div class="ops">${ENT_TX.map((t,i)=>`<button class="op ${p.ent===i?'on':''}" onclick="cfgP('ent',${i})">${t}</button>`).join('')}</div></div>
+  <div class="card"><h3>Stop loss (SL) ${cb(p.sl,q.sl)}</h3><div class="ops">${SL_OP.map(([v,t])=>`<button class="op ${Math.abs(p.sl-v)<1e-6?'on':''}" onclick="cfgP('sl',${v})">${t}</button>`).join('')}</div></div>
+  <div class="card"><h3>Take profit y entradas ${cb([p.tp,p.maxN,p.minN],[q.tp,q.maxN,q.minN])}</h3>
+    ${stp('TP (% del Fibo)', (+p.tp).toFixed(0)+'%', "cfgN('tp',-1,1,99)", "cfgN('tp',1,1,99)")}
+    ${stp('Entradas máximas', p.maxN, "cfgN('maxN',-1,1,40)", "cfgN('maxN',1,1,40)")}
+    ${stp('Entradas mínimas', p.minN, "cfgN('minN',-1,1,"+p.maxN+")", "cfgN('minN',1,1,"+p.maxN+")")}
+  </div>
+  <div class="card"><h3>Temporalidades ${cb(p.tfs,q.tfs)}</h3><div class="ops">${TF_OP.map(t=>`<button class="op ${tfs.includes(t)?'on':''}" onclick="cfgTf('${t}')">${t}</button>`).join('')}</div></div>
+  <div class="card"><h3>Every Trade (ET) ${cb([p.et,p.dd,p.ddFrom,p.ddX],[q.et,q.dd,q.ddFrom,q.ddX])}</h3>
+    <div class="ops">${[1,2,0].map(v=>`<button class="op ${p.et===v?'on':''}" onclick="cfgP('et',${v})">${ET_TX[v]}</button>`).join('')}</div>
+    <div class="row"><div class="tx"><b>TP según el peor DD</b><span>Desde un peor DD de ${$$(p.ddFrom)} cierra en ${p.ddX}× ese DD.</span></div><button class="sw ${p.dd?'on':''}" onclick="cfgP('dd',${!p.dd})"></button></div>
+    ${p.dd?stp('Desde peor DD de', $$(p.ddFrom,0), "cfgN('ddFrom',-5,0,1000)", "cfgN('ddFrom',5,0,1000)")+stp('Cierra en × peor DD', (+p.ddX).toFixed(2), "cfgN('ddX',-0.05,0.05,5)", "cfgN('ddX',0.05,0.05,5)"):''}
+  </div>
+  <div class="card"><h3>Riesgo por escalera ${cb(r,rb)} <span class="r mute" style="font-size:12px">vale para toda la cuenta</span></h3>
+    <div class="row"><div class="tx"><b>Usar el capital total de la cuenta</b><span>Cada escalera nueva arriesga el balance × %.</span></div><button class="sw ${r.capital?'on':''}" onclick="cfgR('capital',${!r.capital})"></button></div>
+    ${stp('% del balance', (+r.pct).toFixed(0)+'%', "cfgRN('pct',-5,1,100)", "cfgRN('pct',5,1,100)")}
+    ${stp('Monto fijo', $$(+r.fijo,0), "cfgRN('fijo',-5,5,100000)", "cfgRN('fijo',5,5,100000)")}
+    <div class="aviso" style="background:color-mix(in srgb,var(--blue) 12%,transparent)">${r.capital?`Con balance ${$$(c.balance)} la próxima escalera arriesgaría <b>${$$(c.balance*r.pct/100)}</b>. Si apagas el interruptor vuelve a <b>${$$(+r.fijo)}</b> fijos.`:`La próxima escalera arriesgaría <b>${$$(+r.fijo)}</b>.`}</div>
+  </div>
+  <div class="card"><div class="fld"><label for="cfgNom">Nombre de esta configuración (opcional)</label><input id="cfgNom" type="text" maxlength="40" value="${esc(CNOM)}" oninput="CNOM=this.value"></div>
+    <button class="btn p" style="width:100%;padding:12px;font-size:15px" onclick="cfgRevisar()">Revisar cambios</button>
+    <button class="btn" style="width:100%;padding:10px;margin-top:8px" onclick="cfgPreGuardar()">Guardar como predeterminada</button>
+  </div></div>`;
+}
+function cfgP(k,v){ CE.perfiles[CP][k]=v; vCfg(); }
+function cfgN(k,d,a,b){ const p=CE.perfiles[CP]; p[k]=Math.round(Math.min(b,Math.max(a,(+p[k])+d))*100)/100; if(k==='maxN'&&p.minN>p.maxN) p.minN=p.maxN; vCfg(); }
+function cfgR(k,v){ CE.riesgo[k]=v; vCfg(); }
+function cfgRN(k,d,a,b){ const r=CE.riesgo; r[k]=Math.min(b,Math.max(a,(+r[k])+d)); vCfg(); }
+function cfgTf(t){ const p=CE.perfiles[CP]; let L=p.tfs.split(',').filter(x=>x); L=L.includes(t)?L.filter(x=>x!==t):L.concat(t); if(!L.length) return toast('Deja al menos una temporalidad'); p.tfs=TF_OP.filter(x=>L.includes(x)).concat(L.filter(x=>!TF_OP.includes(x))).join(','); vCfg(); }
+function cfgDifs(){
+  const out=[], r=CE.riesgo, rb=CB.riesgo;
+  CE.perfiles.forEach((p,i)=>{ const q=CB.perfiles[i]; if(!p.fam) return; const f=p.fam+' · ';
+    if(p.on!==q.on) out.push([f+'Activo', q.on?'sí':'no', p.on?'sí':'no']);
+    if(p.ent!==q.ent) out.push([f+'Entrada', ENT_TX[q.ent], ENT_TX[p.ent]]);
+    if(Math.abs(p.sl-q.sl)>1e-6) out.push([f+'SL', slTx(q.sl), slTx(p.sl)]);
+    if(p.tp!==q.tp) out.push([f+'TP', q.tp+'%', p.tp+'%']);
+    if(p.maxN!==q.maxN) out.push([f+'Entradas máx.', q.maxN, p.maxN]);
+    if(p.minN!==q.minN) out.push([f+'Entradas mín.', q.minN, p.minN]);
+    if(p.tfs!==q.tfs) out.push([f+'Temporalidades', q.tfs, p.tfs]);
+    if(p.et!==q.et) out.push([f+'ET', ET_TX[q.et], ET_TX[p.et]]);
+    if(!!p.dd!==!!q.dd || p.ddFrom!==q.ddFrom || p.ddX!==q.ddX) out.push([f+'TP x DD', q.dd?`${$$(q.ddFrom,0)} · ${q.ddX}×`:'no', p.dd?`${$$(p.ddFrom,0)} · ${p.ddX}×`:'no']);
+  });
+  if(r.capital!==rb.capital) out.push(['Capital total', rb.capital?'activado':'apagado', r.capital?'activado':'apagado']);
+  if(r.pct!==rb.pct) out.push(['% del balance', (+rb.pct).toFixed(0)+'%', (+r.pct).toFixed(0)+'%']);
+  if(r.fijo!==rb.fijo) out.push(['Monto fijo', $$(+rb.fijo), $$(+r.fijo)]);
+  return out;
+}
+function cfgRevisar(){ CCTAS={}; CCTAS[S.cfgCta]=true; CV='confirmar'; vCfg(); window.scrollTo(0,0); }
+function vCfgConfirmar(c){
+  const df=cfgDifs(), r=CE.riesgo;
+  const otras=CFG.cuentas.filter(k=>k.cuenta!==c.cuenta);
+  const lim=(D&&D.ajustes)?limiteDe(c.cuenta):0;
+  $('vista').innerHTML = `<div class="grid" style="max-width:760px">
+  <div><button class="btn" onclick="CV='editar';vCfg()">‹ Editar</button></div>
+  <div class="card"><h3>Revisar cambios · ${esc(String(c.modo).toUpperCase()==='REAL'?'Real':'Demo')} ${esc(c.cuenta)}</h3>
+    ${CNOM?`<div style="font-weight:700;margin-bottom:6px">${esc(CNOM)}</div>`:''}
+    ${df.length?df.map(([k,a,b])=>`<div class="dif"><span>${esc(k)}</span><span><s>${esc(a)}</s> → <b>${esc(b)}</b></span></div>`).join(''):'<div class="empty">Sin cambios respecto a lo que tiene el EA. Puedes enviarla igual para fijarla desde la app.</div>'}
+    ${r.capital?`<div class="aviso">Con el capital total activado, un SL puede dejar la cuenta casi en cero.${lim>0?` El límite diario de esta cuenta es −${$$(lim,0)}: si el riesgo pasa de ahí, súbelo en Ajustes.`:''}</div>`:''}
+    <div class="aviso" style="background:var(--card2)">Se aplica a la <b>siguiente</b> escalera; la abierta no cambia.</div>
+    ${otras.map(k=>`<label style="display:flex;align-items:center;gap:12px;min-height:44px;margin-top:8px;font-size:14px"><input type="checkbox" style="width:22px;height:22px" ${CCTAS[k.cuenta]?'checked':''} onchange="CCTAS['${esc(k.cuenta)}']=this.checked"> Aplicar también en la ${esc(String(k.modo).toUpperCase()==='REAL'?'real':'demo')} (${esc(k.cuenta)})</label>`).join('')}
+    <button id="cfgEnv" class="btn p" style="width:100%;padding:13px;margin-top:12px;font-size:15px" onclick="cfgEnviar()">Confirmar y enviar</button>
+    <button class="btn" style="width:100%;padding:10px;margin-top:8px" onclick="cfgVolver()">Cancelar</button>
+  </div></div>`;
+}
+async function cfgEnviar(){
+  const b=$('cfgEnv'); if(b){ b.disabled=true; b.textContent='Enviando…'; }
+  const cuentas=Object.keys(CCTAS).filter(k=>CCTAS[k]);
+  try{
+    const r=await api('config_guardar',{cuentas, datos:CE, nombre:CNOM});
+    if(!r.ok){ toast(r.msg||'Error'); if(b){ b.disabled=false; b.textContent='Confirmar y enviar'; } return; }
+    CFG=r; CFGT=Date.now(); BIT=null; CV='inicio'; CE=null; vCfg(); window.scrollTo(0,0);
+    toast('Enviado. El EA lo toma en unos 5 minutos.');
+  }catch(e){ if(e!=='sesión'){ toast('Error: '+e); if(b){ b.disabled=false; b.textContent='Confirmar y enviar'; } } }
+}
+async function cfgPreGuardar(){
+  const nombre=(CNOM||'').trim(); if(!nombre){ toast('Escribe un nombre para guardarla'); $('cfgNom')&&$('cfgNom').focus(); return; }
+  const p=CE.perfiles[CP];
+  try{ const r=await api('preset_guardar',{nombre, datos:{perfil:{ent:p.ent,maxN:p.maxN,minN:p.minN,sl:p.sl,tp:p.tp,tfs:p.tfs,et:p.et,dd:p.dd,ddFrom:p.ddFrom,ddX:p.ddX}, riesgo:CE.riesgo}});
+    if(!r.ok) return toast(r.msg||'Error'); CFG=r; CFGT=Date.now(); toast('Guardada: '+nombre); }catch(e){ if(e!=='sesión') toast('Error: '+e); }
+}
+function cfgPreQuitar(id){
+  const x=(CFG.presets||[]).find(p=>p.id===id); if(!x) return;
+  modal(`<h3>Quitar configuración</h3><p>¿Quitar "${esc(x.nombre)}" de tus configuraciones? No cambia nada en los EAs.</p><div class="acts"><button class="btn" onclick="cerrar()">Cancelar</button><button class="btn p" style="background:var(--red);border-color:var(--red)" onclick="cfgPreQuitarOk(${id})">Quitar</button></div>`);
+}
+async function cfgPreQuitarOk(id){ cerrar(); try{ const r=await api('preset_quitar',{id}); if(r.ok){ CFG=r; CFGT=Date.now(); vCfg(); } else toast(r.msg||'Error'); }catch(e){} }
+
 let BIT=null, BITT=0;
-const EV_BIT={login_pin:'Entrada con PIN',huella:'Entrada con huella/rostro',crear_pin:'PIN de recuperación',pin_cambiado:'Cambio de PIN'};
+const EV_BIT={login_pin:'Entrada con PIN',huella:'Entrada con huella/rostro',crear_pin:'PIN de recuperación',pin_cambiado:'Cambio de PIN',config:'Configuración enviada'};
 async function bitCargar(){
   if(BIT && Date.now()-BITT<60000) return;
   try{ const r=await api('bitacora'); if(r&&r.ok){ BIT=r; BITT=Date.now(); if(S.tab==='aj') vAj(); } }catch(e){}
