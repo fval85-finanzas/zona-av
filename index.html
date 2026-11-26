@@ -29,7 +29,8 @@ nav.side{width:210px;flex:none;background:var(--card);border-right:1px solid var
 .side .foot{margin-top:auto;font-size:12px;color:var(--mute);padding:0 8px}
 main{flex:1;min-width:0;padding:22px 26px 90px}
 .top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
-.top h1{font-size:24px;margin:0;flex:1}
+.top h1{font-size:24px;margin:0;flex:0 1 auto}
+#bPausa{margin-right:auto}
 .pill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:99px;background:var(--card);border:1px solid var(--line);font-size:12px;color:var(--mute)}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--mute)}
 .dot.g{background:var(--green)}.dot.r{background:var(--red)}.dot.y{background:var(--gold)}
@@ -124,6 +125,9 @@ nav.bot{display:none}
  nav.bot .nb{flex:1 0 74px;flex-direction:column;gap:2px;font-size:11px;padding:6px 2px;text-align:center;align-items:center;white-space:nowrap}
  nav.bot .nb i{font-style:normal;font-size:18px}
  .top h1{font-size:20px}
+ .top{gap:8px}
+ #bPausa .btn{font-size:11px!important;padding:5px 8px!important}
+ .top .btn{padding-left:9px;padding-right:9px}
  .kpi .v{font-size:19px}
  .cal{gap:2px}.cd{min-height:50px;padding:3px}.cd .dv{font-size:10px;letter-spacing:-.3px}.cd .dp{display:none}.cd .dn{font-size:10px}
  .lg{display:none}.sh{display:inline}.mh{display:none}
@@ -177,10 +181,11 @@ nav.bot{display:none}
   <main>
     <div class="top">
       <h1 id="titulo">Dashboard</h1>
+      <span id="bPausa"></span>
       <select id="selCta" onchange="S.cta=this.value;guardar();pintar()"></select>
       <span class="pill" id="online"><span class="dot"></span>…</span>
       <button class="btn" id="bAct" onclick="actualizar()" title="Actualizar"><span class="gi">⟳</span></button>
-      <button class="btn salir" onclick="pedirSalir()" title="Salir">⏻ Salir</button>
+      <button class="btn salir" onclick="pedirSalir()" title="Salir">⏻<span class="mh"> Salir</span></button>
     </div>
     <div id="vista"></div>
   </main>
@@ -191,7 +196,7 @@ nav.bot{display:none}
 
 <script>
 // ---------------------------------------------------------------- configuracion
-const APP_VER = '2.8.0';
+const APP_VER = '2.8.1';
 const API = 'https://qehuvzutrbqgppfifapp.supabase.co/functions/v1/web';
 const VERS = {ESCALERA:'1.9.4', ESCANER:'1.9.4', FIBO:'0.6', REPORTE:'0.3'};   // ultimas versiones publicadas
 const TABS = [['dash','Dashboard','◧'],['est','Estadísticas','▤'],['lab','Laboratorio','⚗'],['lic','Licencias','⚿'],['cfg','Configuración','☰'],['aj','Ajustes','⚙']];
@@ -385,6 +390,9 @@ function pintar(){
   $('vista').classList.toggle('an', ANIM);
   menu();
   $('titulo').textContent = TABS.find(t=>t[0]===S.tab)[1];
+  $('bPausa').innerHTML = (!inv && S.tab==='cfg') ? (D.ajustes.pausa
+    ? `<button class="btn p" style="font-size:12px;padding:6px 10px" onclick="aj({pausa:false})">▶ Reanudar todas</button>`
+    : `<button class="btn d" style="font-size:12px;padding:6px 10px" onclick="pausarTodas()">⏸ Pausar todas</button>`) : '';
   const c = cta();
   const on = $('online');
   $('selCta').style.display = (inv||S.tab==='lic'||S.tab==='aj'||S.tab==='lab'||S.tab==='cfg') ? 'none':'';
@@ -960,13 +968,14 @@ function vCfg(){
       ${uso?'<span class="badge b-ok">En uso</span>':`<button class="btn p" onclick="cfgUsar('${fija?x.id:'u'+x.id}')">Usar</button>`}${fija?'':`<button class="btn d" title="Quitar" onclick="cfgPreQuitar(${x.id})">✕</button>`}</div>`; };
   const a=D.ajustes;
   $('vista').innerHTML = `<div class="grid" style="max-width:760px">
+  ${D.ajustes.pausa?`<div class="aviso" style="display:flex;align-items:center;gap:10px;justify-content:space-between;background:color-mix(in srgb,var(--red) 18%,transparent)"><span><b>Todas las cuentas están en pausa.</b> Ninguna abre escaleras nuevas.</span><button class="btn p" style="font-size:12px;padding:6px 10px;white-space:nowrap" onclick="aj({pausa:false})">▶ Reanudar</button></div>`:''}
   <div class="card">
     <div class="seg" style="display:flex;width:100%">${CFG.cuentas.map(k=>`<button style="flex:1;padding:9px" class="${k.cuenta===c.cuenta?'on':''}" onclick="cfgSetCta('${esc(k.cuenta)}')">${esc(String(k.modo).toUpperCase()==='REAL'?'Real':'Demo')} · ${esc(k.cuenta)}</button>`).join('')}</div>
     <div class="mute" style="font-size:13px;margin-top:10px;display:flex;align-items:center;gap:8px"><span class="dot ${c.hace>=0&&c.hace<=12?'g':'r'}"></span>${c.hace>=0&&c.hace<=12?'EA conectado · hace '+c.hace+' min':'Sin reporte hace '+c.hace+' min'} · Balance ${$$(c.balance)}</div>
   </div>
   <div class="card cfg-cur">
     <h3><span class="cfg-k">EN USO AHORA</span><span class="r">${est?`<span class="badge ${est.ok?'b-ok':'b-y'}">${est.t}</span>`:''}</span></h3>
-    ${hayEA?'':'<div class="aviso">El EA de esta cuenta todavía no reporta su configuración. Instala y recompila el Escáner 1.9.2 (con el Reporte activado). Mientras, ves lo último enviado o los valores de fábrica.</div>'}
+    ${hayEA?'':'<div class="aviso">El EA de esta cuenta todavía no reporta su configuración. Instala y recompila el Escáner 1.9.4 (con el Reporte activado). Mientras, ves lo último enviado o los valores de fábrica.</div>'}
     ${base.perfiles.filter(p=>p.on&&p.fam).map(p=>`<div style="margin-top:10px"><b style="font-size:17px">${esc(p.fam)}</b><div class="tags">${perfTags(p).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div></div>`).join('')||'<div class="empty">Ningún perfil activo</div>'}
     ${ctrlCuenta(c)}
     <div style="margin-top:12px;font-size:14px">Riesgo por escalera: ${riesgoTx(base.riesgo, c.balance)}</div>
@@ -1047,7 +1056,7 @@ function cfgAvisos(c){
 }
 function cfgCardsExt(c){
   const t=cfgTiene(c), L=CE.limites, Lb=CB.limites, E=CE.escaner, Eb=CB.escaner, X=CE.escalera, Xb=CB.escalera, r=CE.riesgo;
-  const sinDato = m => m ? '' : '<div class="nota">El EA todavía no informa estos valores (instala la 1.9.3). Si los cambias, se envían igual.</div>';
+  const sinDato = m => m ? '' : '<div class="nota">El EA todavía no informa estos valores (instala la 1.9.4). Si los cambias, se envían igual.</div>';
   const av=cfgAvisos(c);
   const sw=(lbl,sub,k,v,fn)=>`<div class="row"><div class="tx"><b>${lbl}</b>${sub?`<span>${sub}</span>`:''}</div><button class="sw ${v?'on':''}" onclick="${fn}('${k}',${!v})"></button></div>`;
   return `<div class="card"><h3>Límites ${cb(L,Lb)}</h3>${sinDato(t.L)}
@@ -1205,8 +1214,7 @@ function ajLim(c){ aj({limiteCuenta:{cuenta:c, valor:+$('lim_'+c).value}}); }
 // ---------------------------------------------------------------- 2.8.0: pausa y limite diario dentro de En uso ahora
 function ctrlCuenta(c){
   const a=D.ajustes, pc=!!(a.pausas||{})[c.cuenta];
-  return `<div class="row" style="margin-top:8px"><div class="tx"><b>Pausar esta cuenta ${pc||a.pausa?'<span class="badge b-r">En pausa</span>':''}</b><span>${a.pausa?'<b>Todas las cuentas están en pausa.</b> ':''}No abre escaleras nuevas; las abiertas se siguen administrando. Llega en máx. 5 min.</span></div><button class="sw ${pc?'on':''}" aria-label="Pausar esta cuenta" onclick="aj({pausaCuenta:{cuenta:'${esc(c.cuenta)}',valor:${!pc}}})"></button></div>
-    <div style="display:flex;justify-content:flex-end"><button class="btn ${a.pausa?'p':'d'}" style="font-size:12px;padding:5px 10px" onclick="${a.pausa?'aj({pausa:false})':'pausarTodas()'}">${a.pausa?'▶ Reanudar todas':'⏸ Pausar todas'}</button></div>`;
+  return `<div class="row" style="margin-top:8px"><div class="tx"><b>Pausar esta cuenta ${pc?'<span class="badge b-r">En pausa</span>':''}</b><span>No abre escaleras nuevas; las abiertas se siguen administrando. Llega en máx. 5 min.</span></div><button class="sw ${pc?'on':''}" aria-label="Pausar esta cuenta" onclick="aj({pausaCuenta:{cuenta:'${esc(c.cuenta)}',valor:${!pc}}})"></button></div>`;
 }
 function pausarTodas(){
   modal(`<h3>Pausar todas las cuentas</h3><p>Ninguna cuenta abre escaleras nuevas hasta que la reanudes. Las abiertas se siguen administrando.</p>
