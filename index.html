@@ -191,9 +191,9 @@ nav.bot{display:none}
 
 <script>
 // ---------------------------------------------------------------- configuracion
-const APP_VER = '2.7.0';
+const APP_VER = '2.8.0';
 const API = 'https://qehuvzutrbqgppfifapp.supabase.co/functions/v1/web';
-const VERS = {ESCALERA:'1.9.3', ESCANER:'1.9.3', FIBO:'0.6', REPORTE:'0.3'};   // ultimas versiones publicadas
+const VERS = {ESCALERA:'1.9.4', ESCANER:'1.9.4', FIBO:'0.6', REPORTE:'0.3'};   // ultimas versiones publicadas
 const TABS = [['dash','Dashboard','◧'],['est','Estadísticas','▤'],['lab','Laboratorio','⚗'],['lic','Licencias','⚿'],['cfg','Configuración','☰'],['aj','Ajustes','⚙']];
 
 // ---------------------------------------------------------------- estado
@@ -404,13 +404,13 @@ function vDash(){
   const flot = c.equity - c.balance;
   const bal0 = c.balance - c.plhoy;
   const lim = limiteDe(c.cuenta);
-  const pz = D.ajustes.pausa ? `<span class="badge b-r">PAUSA REMOTA ACTIVA</span>` :
+  const pz = D.ajustes.pausa ? `<span class="badge b-r">PAUSA REMOTA ACTIVA (todas)</span>` : (D.ajustes.pausas||{})[c.cuenta] ? `<span class="badge b-r">CUENTA EN PAUSA</span>` :
             (lim && c.plhoy <= -lim ? `<span class="badge b-r">LÍMITE DIARIO ALCANZADO</span>` : '');
   let h = pz ? `<div style="margin-bottom:12px">${pz}</div>` : '';
   h += `<div class="grid k6">
     ${kpi('Balance', $$(c.balance), '', esc(c.modo)+' · '+esc(c.servidor))}
     ${kpi('Equity', $$(c.equity), '', 'Flotante <span class="'+cl(flot)+'">'+sg(flot)+'</span>')}
-    ${kpi('Hoy', sg(c.plhoy), cl(c.plhoy), pct(c.plhoy,bal0).toFixed(2)+'%'+(lim?' · límite -$'+lim:''))}
+    ${kpi('Hoy', sg(c.plhoy), cl(c.plhoy), pct(c.plhoy,bal0).toFixed(2)+'%'+(lim?' · límite -'+$$(lim,0)+(autoDe(c.cuenta)?' (auto)':''):''))}
     ${kpi('Esta semana', sg(sem), cl(sem), 'desde el lunes')}
     ${kpi('Este mes', sg(mes), cl(mes), nm+' escaleras')}
     ${kpi('Riesgo abierto', $$(c.riesgo), c.riesgo>0?'neg':'', c.nAbiertas+' escalera(s) abierta(s)')}
@@ -428,7 +428,18 @@ function vDash(){
   h += `<div class="card" style="margin-top:14px">${calendario(E,c)}</div>`;
   $('vista').innerHTML = h;
 }
-function limiteDe(cuenta){ const L=D.ajustes.limites||{}; return (cuenta in L) ? L[cuenta] : D.ajustes.limite; }
+function limFijo(cuenta){ const L=D.ajustes.limites||{}; return (cuenta in L) ? L[cuenta] : D.ajustes.limite; }
+function autoDe(cuenta){ return +((D.ajustes.autos||{})[cuenta]||0); }
+function pausaDe(cuenta){ return !!D.ajustes.pausa || !!(D.ajustes.pausas||{})[cuenta]; }
+// 2.8.0: riesgo por escalera como lo calcula el servidor (capital total = balance al inicio del dia x %)
+function riesgoDe(cuenta, r){
+  const k=(typeof CFG!=='undefined'&&CFG&&CFG.cuentas||[]).find(x=>x.cuenta===cuenta);
+  const d=(D.cuentas||[]).find(x=>x.cuenta===cuenta)||{};
+  if(!r && k) r=cfgBase(k).riesgo;
+  if(r){ const bal=(k?k.balance:d.balance)||0, ph=(k?k.plhoy:d.plhoy)||0; return r.capital ? (bal-ph)*r.pct/100 : +r.fijo; }
+  return +(d.riesgo||0);
+}
+function limiteDe(cuenta, r){ const n=autoDe(cuenta); if(n>0){ const x=riesgoDe(cuenta,r); if(x>0) return Math.round(n*x*100)/100; } return limFijo(cuenta); }
 function kpi(l,v,c,s){ return `<div class="card kpi"><div class="l">${l}</div><div class="v ${c||''}">${v}</div><div class="s">${s||''}</div></div>`; }
 
 function calendario(E,c){
@@ -949,13 +960,6 @@ function vCfg(){
       ${uso?'<span class="badge b-ok">En uso</span>':`<button class="btn p" onclick="cfgUsar('${fija?x.id:'u'+x.id}')">Usar</button>`}${fija?'':`<button class="btn d" title="Quitar" onclick="cfgPreQuitar(${x.id})">✕</button>`}</div>`; };
   const a=D.ajustes;
   $('vista').innerHTML = `<div class="grid" style="max-width:760px">
-  <div class="card"><h3>Control de los EAs</h3>
-    <div class="row"><div class="tx"><b>Pausa remota</b><span>Ninguna escalera nueva en todas las cuentas. Las abiertas se siguen administrando. Llega en máx. 5 min.</span></div><button class="sw ${a.pausa?'on':''}" onclick="aj({pausa:${!a.pausa}})"></button></div>
-    ${D.cuentas.map(k=>{ const propio=(a.limites||{})[k.cuenta]!==undefined; return `<div class="row"><div class="tx"><b>Límite de pérdida diaria · ${esc(k.cuenta)} ${esc(k.modo)}</b><span>${propio?'Límite propio':'Usa el límite general'} · 0 = sin límite</span></div>
-      <span style="display:flex;gap:6px;align-items:center">-$<input type="number" id="lim_${esc(k.cuenta)}" min="0" step="5" value="${limiteDe(k.cuenta)}" style="width:80px"><button class="btn" onclick="ajLim('${esc(k.cuenta)}')">Guardar</button>${propio?`<button class="btn" title="Volver al límite general" onclick="aj({limiteCuenta:{cuenta:'${esc(k.cuenta)}',valor:null}})">General</button>`:''}</span></div>`; }).join('')}
-    <div class="row"><div class="tx"><b>Límite general</b><span>Para las cuentas que no tienen uno propio.</span></div>
-      <span style="display:flex;gap:6px;align-items:center">-$<input type="number" id="lim" min="0" step="5" value="${a.limite}" style="width:80px"><button class="btn" onclick="aj({limite:+$('lim').value})">Guardar</button></span></div>
-  </div>
   <div class="card">
     <div class="seg" style="display:flex;width:100%">${CFG.cuentas.map(k=>`<button style="flex:1;padding:9px" class="${k.cuenta===c.cuenta?'on':''}" onclick="cfgSetCta('${esc(k.cuenta)}')">${esc(String(k.modo).toUpperCase()==='REAL'?'Real':'Demo')} · ${esc(k.cuenta)}</button>`).join('')}</div>
     <div class="mute" style="font-size:13px;margin-top:10px;display:flex;align-items:center;gap:8px"><span class="dot ${c.hace>=0&&c.hace<=12?'g':'r'}"></span>${c.hace>=0&&c.hace<=12?'EA conectado · hace '+c.hace+' min':'Sin reporte hace '+c.hace+' min'} · Balance ${$$(c.balance)}</div>
@@ -964,7 +968,9 @@ function vCfg(){
     <h3><span class="cfg-k">EN USO AHORA</span><span class="r">${est?`<span class="badge ${est.ok?'b-ok':'b-y'}">${est.t}</span>`:''}</span></h3>
     ${hayEA?'':'<div class="aviso">El EA de esta cuenta todavía no reporta su configuración. Instala y recompila el Escáner 1.9.2 (con el Reporte activado). Mientras, ves lo último enviado o los valores de fábrica.</div>'}
     ${base.perfiles.filter(p=>p.on&&p.fam).map(p=>`<div style="margin-top:10px"><b style="font-size:17px">${esc(p.fam)}</b><div class="tags">${perfTags(p).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div></div>`).join('')||'<div class="empty">Ningún perfil activo</div>'}
+    ${ctrlCuenta(c)}
     <div style="margin-top:12px;font-size:14px">Riesgo por escalera: ${riesgoTx(base.riesgo, c.balance)}</div>
+    ${ctrlLimite(c, base)}
     ${cfgTiene(c).L?`<div style="margin-top:4px;font-size:14px">Límite total: <b>${base.riesgo.capital?'riesgo × '+base.limites.maxEsc:$$(base.limites.lim)}</b> · máx. <b>${base.limites.maxEsc}</b> escalera(s) a la vez</div>`:''}
     ${cfgTiene(c).E?`<div class="nota" style="margin-top:4px">Solo datos: ${esc(base.escaner.solo||'—')}${base.escaner.excluir?' · Excluidos: '+esc(base.escaner.excluir):''} · Avisos ${base.escaner.mute?'apagados':'encendidos'} · Abrir al T3: ${base.escaner.abrirT3?'sí':'no'}</div>`:''}
     ${est?`<div class="nota">${esc(est.s)}${c.app&&c.app.nombre?' · '+esc(c.app.nombre):''}</div>`:''}
@@ -1034,8 +1040,8 @@ function vCfgEditar(c){
 function cfgAvisos(c){
   const r=CE.riesgo, L=CE.limites, out=[];
   const riesgo = r.capital ? (c.balance||0)*r.pct/100 : +r.fijo;
-  const lim = (D&&D.ajustes) ? limiteDe(c.cuenta) : 0;
-  if(lim>0 && riesgo>lim) out.push(`El riesgo por escalera (${$$(riesgo)}) pasa el <b>límite diario</b> de esta cuenta (−${$$(lim,0)}): un SL pausa la cuenta el resto del día. Cámbialo arriba en Control de los EAs.`);
+  const lim = (D&&D.ajustes) ? limiteDe(c.cuenta, r) : 0;
+  if(lim>0 && riesgo>lim) out.push(`El riesgo por escalera (${$$(riesgo)}) pasa el <b>límite diario</b> de esta cuenta (−${$$(lim,0)}): un SL pausa la cuenta el resto del día. Cámbialo en En uso ahora (o activa el límite automático).`);
   if(!r.capital && riesgo*L.maxEsc > L.lim+0.01) out.push(`Con ${L.maxEsc} escaleras de ${$$(riesgo)} el riesgo total sería ${$$(riesgo*L.maxEsc)} y pasa el <b>límite total</b> de ${$$(L.lim)}: ${L.maxEsc>1?'la última no entraría':'no entraría'}.`);
   return out;
 }
@@ -1047,7 +1053,7 @@ function cfgCardsExt(c){
   return `<div class="card"><h3>Límites ${cb(L,Lb)}</h3>${sinDato(t.L)}
     ${r.capital?`<div class="mute" style="font-size:13px">Con capital total el límite total es automático: riesgo × máximo de escaleras.</div>`:stp('Riesgo total máximo', $$(L.lim,0), "cfgLN('lim',-25,5,100000)", "cfgLN('lim',25,5,100000)")}
     ${stp('Máximo de escaleras a la vez', L.maxEsc, "cfgLN('maxEsc',-1,1,10)", "cfgLN('maxEsc',1,1,10)")}
-    <div class="mute" style="font-size:13px">Límite de pérdida diaria de esta cuenta: <b>−${$$((D&&D.ajustes)?limiteDe(c.cuenta):0,0)}</b> (se cambia arriba, en Control de los EAs).</div>
+    <div class="mute" style="font-size:13px">Límite de pérdida diaria de esta cuenta: <b>−${$$((D&&D.ajustes)?limiteDe(c.cuenta,CE.riesgo):0,0)}</b>${autoDe(c.cuenta)?' (automático: '+autoDe(c.cuenta)+' × riesgo)':''} (se cambia en En uso ahora)</div>
     ${av.map(a=>`<div class="aviso">${a}</div>`).join('')}
   </div>
   <div class="card"><h3>Escáner y avisos ${cb(E,Eb)}</h3>${sinDato(t.E)}
@@ -1140,7 +1146,7 @@ function cfgRevisar(){ CCTAS={}; CCTAS[S.cfgCta]=true; CV='confirmar'; vCfg(); w
 function vCfgConfirmar(c){
   const df=cfgDifs(), r=CE.riesgo;
   const otras=CFG.cuentas.filter(k=>k.cuenta!==c.cuenta);
-  const lim=(D&&D.ajustes)?limiteDe(c.cuenta):0;
+  const lim=(D&&D.ajustes)?limiteDe(c.cuenta,CE.riesgo):0;
   $('vista').innerHTML = `<div class="grid" style="max-width:760px">
   <div><button class="btn" onclick="CV='editar';vCfg()">‹ Editar</button></div>
   <div class="card"><h3>Revisar cambios · ${esc(String(c.modo).toUpperCase()==='REAL'?'Real':'Demo')} ${esc(c.cuenta)}</h3>
@@ -1196,6 +1202,29 @@ async function cerrarSes(id){
   try{ const r=await api('sesion_cerrar',{id}); if(r&&r.ok){ BIT=r; BITT=Date.now(); vAj(); toast('Sesión cerrada'); } else toast((r&&r.msg)||'No se pudo'); }catch(e){}
 }
 function ajLim(c){ aj({limiteCuenta:{cuenta:c, valor:+$('lim_'+c).value}}); }
+// ---------------------------------------------------------------- 2.8.0: pausa y limite diario dentro de En uso ahora
+function ctrlCuenta(c){
+  const a=D.ajustes, pc=!!(a.pausas||{})[c.cuenta];
+  return `<div class="row" style="margin-top:8px"><div class="tx"><b>Pausar esta cuenta ${pc||a.pausa?'<span class="badge b-r">En pausa</span>':''}</b><span>${a.pausa?'<b>Todas las cuentas están en pausa.</b> ':''}No abre escaleras nuevas; las abiertas se siguen administrando. Llega en máx. 5 min.</span></div><button class="sw ${pc?'on':''}" aria-label="Pausar esta cuenta" onclick="aj({pausaCuenta:{cuenta:'${esc(c.cuenta)}',valor:${!pc}}})"></button></div>
+    <div style="display:flex;justify-content:flex-end"><button class="btn ${a.pausa?'p':'d'}" style="font-size:12px;padding:5px 10px" onclick="${a.pausa?'aj({pausa:false})':'pausarTodas()'}">${a.pausa?'▶ Reanudar todas':'⏸ Pausar todas'}</button></div>`;
+}
+function pausarTodas(){
+  modal(`<h3>Pausar todas las cuentas</h3><p>Ninguna cuenta abre escaleras nuevas hasta que la reanudes. Las abiertas se siguen administrando.</p>
+    <div class="acts"><button class="btn" onclick="cerrar()">Cancelar</button><button class="btn p" style="background:var(--red);border-color:var(--red)" onclick="cerrar();aj({pausa:true})">Pausar todas</button></div>`);
+}
+let LIMT=null;
+function ctrlLimite(c, base){
+  const n=autoDe(c.cuenta), x=riesgoDe(c.cuenta, base.riesgo), cu=esc(c.cuenta);
+  const fijo=limFijo(c.cuenta);
+  return `<div class="row"><div class="tx"><b>Límite diario automático</b><span>${n?'Sigue al riesgo: si lo subes o bajas, el límite se ajusta solo.':'Apagado: usas un monto fijo.'}</span></div><button class="sw ${n?'on':''}" aria-label="Límite diario automático" onclick="limAuto('${cu}',${n?0:2})"></button></div>
+    ${n ? stp('Veces el riesgo', n+'×', "limN('"+cu+"',-1)", "limN('"+cu+"',1)")+`<div style="font-size:14px;margin-top:4px">Límite de hoy: <b>−${$$(n*x,0)}</b> <span class="mute">(${n} × ${$$(x,0)})</span></div>`
+        : stp('Pérdida diaria máxima', fijo>0?'−'+$$(fijo,0):'sin límite', "limF('"+cu+"',-5)", "limF('"+cu+"',5)")}
+    <div class="nota">${n?'':'0 = sin límite. '}Al llegar al límite la cuenta no abre escaleras nuevas el resto del día.</div>`;
+}
+function limAuto(cu,n){ aj({limiteAuto:{cuenta:cu,n}}); }
+function limDiferido(o){ clearTimeout(LIMT); LIMT=setTimeout(()=>aj(o),900); pintar(); }
+function limN(cu,d){ const A=D.ajustes.autos=D.ajustes.autos||{}; const n=Math.max(1,Math.min(10,(A[cu]||2)+d)); A[cu]=n; limDiferido({limiteAuto:{cuenta:cu,n}}); }
+function limF(cu,d){ const L=D.ajustes.limites=D.ajustes.limites||{}; const v=Math.max(0,Math.min(100000,(cu in L?L[cu]:D.ajustes.limite)+d)); L[cu]=v; limDiferido({limiteCuenta:{cuenta:cu,valor:v}}); }
 function formInv(i){
   const g = i>=0 ? D.invitados[i] : {nombre:'',vence:''};
   modal(`<h3>${i>=0?'Editar invitado':'Nuevo invitado'}</h3>
