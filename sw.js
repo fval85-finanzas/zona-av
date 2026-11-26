@@ -1,6 +1,6 @@
 // Zona AV - service worker. Guarda la app para que abra rapido y se pueda instalar.
 // Los datos (Supabase) nunca se guardan aqui: siempre van en vivo.
-const CACHE = 'zonaav-2.6.0';
+const CACHE = 'zonaav-2.6.1';
 const ARCHIVOS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

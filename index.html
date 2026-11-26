@@ -191,7 +191,7 @@ nav.bot{display:none}
 
 <script>
 // ---------------------------------------------------------------- configuracion
-const APP_VER = '2.6.0';
+const APP_VER = '2.6.1';
 const API = 'https://qehuvzutrbqgppfifapp.supabase.co/functions/v1/web';
 const VERS = {ESCALERA:'1.9.2', ESCANER:'1.9.2', FIBO:'0.6', REPORTE:'0.3'};   // ultimas versiones publicadas
 const TABS = [['dash','Dashboard','◧'],['est','Estadísticas','▤'],['lab','Laboratorio','⚗'],['lic','Licencias','⚿'],['cfg','Configuración','☰'],['aj','Ajustes','⚙']];
@@ -202,6 +202,7 @@ let ANIM = true;                              // animar los graficos (no en el r
 let GIRO = 0;                                 // cargas en curso (el boton Actualizar gira)
 const S = Object.assign({tab:'dash', tema:'oscuro', cta:'', mes:'', per:'30', graf:'linea', f:{}, selLic:-1}, leer());
 if(!S.f || typeof S.f!=='object') S.f={};
+S.tab='dash';                                 // 2.6.1: siempre abre en Dashboard (invitados: Laboratorio)
 // Laboratorio: por defecto la configuracion de la demo (FlipX M1-M4, EMA50, 5 entradas, AV2, TP 40)
 const LAB_DEMO = {e:1, m:5, a:1, t:40, fam:'FlipX', ind:'', tfs:['M1','M2','M3','M4'], dir:'', desde:'', hasta:'', fuente:''};
 S.lab = Object.assign(JSON.parse(JSON.stringify(LAB_DEMO)), {orden:'r', todas:false, riesgo:100}, (S.lab && typeof S.lab==='object') ? S.lab : {});
@@ -854,14 +855,6 @@ function vAj(){
   <div class="card"><h3>Apariencia</h3>
     <div class="row"><div class="tx"><b>Tema</b><span>Sistema sigue el modo de tu teléfono o PC</span></div>${seg('t',[['oscuro','Oscuro'],['claro','Claro'],['sistema','Sistema']],S.tema,'setTema')}</div>
   </div>
-  <div class="card"><h3>Control de los EAs</h3>
-    <div class="row"><div class="tx"><b>Pausa remota</b><span>Ninguna escalera nueva en todas las cuentas. Las abiertas se siguen administrando. Llega en máx. 5 min (EA Reporte).</span></div><button class="sw ${a.pausa?'on':''}" onclick="aj({pausa:${!a.pausa}})"></button></div>
-    <div class="row"><div class="tx"><b>Límite de pérdida diaria</b><span>Al perder esto en el día se pausan las escaleras nuevas hasta mañana. 0 = sin límite. Cada cuenta puede tener el suyo.</span></div></div>
-    ${D.cuentas.map(c=>{ const propio=(a.limites||{})[c.cuenta]!==undefined; return `<div class="row"><div class="tx"><b>${esc(c.cuenta)} · ${esc(c.modo)}</b><span>${propio?'Límite propio':'Usa el límite general'}</span></div>
-      <span style="display:flex;gap:6px;align-items:center">-$<input type="number" id="lim_${esc(c.cuenta)}" min="0" step="5" value="${limiteDe(c.cuenta)}" style="width:80px"><button class="btn" onclick="ajLim('${esc(c.cuenta)}')">Guardar</button>${propio?`<button class="btn" title="Volver al límite general" onclick="aj({limiteCuenta:{cuenta:'${esc(c.cuenta)}',valor:null}})">General</button>`:''}</span></div>`; }).join('')}
-    <div class="row"><div class="tx"><b>Límite general</b><span>Para las cuentas que no tienen uno propio.</span></div>
-      <span style="display:flex;gap:6px;align-items:center">-$<input type="number" id="lim" min="0" step="5" value="${a.limite}" style="width:80px"><button class="btn" onclick="aj({limite:+$('lim').value})">Guardar</button></span></div>
-  </div>
   <div class="card"><h3>Seguridad</h3>
     <div class="row"><div class="tx"><b>Huella o rostro</b><span>${L.length?L.length+' dispositivo(s) registrado(s)':'Ningún dispositivo registrado'}</span></div>${pkSoporta()?`<button class="btn" onclick="agregarHuella()">Agregar este ${esc(nombreDisp())}</button>`:'<span class="mute" style="font-size:12px">No disponible aquí</span>'}</div>
     ${L.map(k=>`<div class="row"><div class="tx"><b>${esc(k.nombre)}</b><span>Registrado ${esc(k.creada)} · último uso ${esc(k.uso||'—')}</span></div><button class="btn d" onclick="quitarHuella('${esc(k.id)}','${esc(k.nombre)}')">Quitar</button></div>`).join('')}
@@ -947,7 +940,15 @@ function vCfg(){
   const tarjetaPre=(x,fija)=>{ const p=Object.assign({}, fl, x.perfil); const uso=mismoPerfil(fl,p) && (!x.riesgo || (x.riesgo.capital===base.riesgo.capital));
     return `<div class="prc"><div class="tx"><b>${esc(x.nombre)}</b><span>${esc(resumenPre(p))}${x.riesgo?' · riesgo '+(x.riesgo.capital?'capital total '+(+x.riesgo.pct).toFixed(0)+'%':'fijo '+$$(+x.riesgo.fijo)):''}</span>${x.ref?`<span>${esc(x.ref)}</span>`:''}</div>
       ${uso?'<span class="badge b-ok">En uso</span>':`<button class="btn p" onclick="cfgUsar('${fija?x.id:'u'+x.id}')">Usar</button>`}${fija?'':`<button class="btn d" title="Quitar" onclick="cfgPreQuitar(${x.id})">✕</button>`}</div>`; };
+  const a=D.ajustes;
   $('vista').innerHTML = `<div class="grid" style="max-width:760px">
+  <div class="card"><h3>Control de los EAs</h3>
+    <div class="row"><div class="tx"><b>Pausa remota</b><span>Ninguna escalera nueva en todas las cuentas. Las abiertas se siguen administrando. Llega en máx. 5 min.</span></div><button class="sw ${a.pausa?'on':''}" onclick="aj({pausa:${!a.pausa}})"></button></div>
+    ${D.cuentas.map(k=>{ const propio=(a.limites||{})[k.cuenta]!==undefined; return `<div class="row"><div class="tx"><b>Límite de pérdida diaria · ${esc(k.cuenta)} ${esc(k.modo)}</b><span>${propio?'Límite propio':'Usa el límite general'} · 0 = sin límite</span></div>
+      <span style="display:flex;gap:6px;align-items:center">-$<input type="number" id="lim_${esc(k.cuenta)}" min="0" step="5" value="${limiteDe(k.cuenta)}" style="width:80px"><button class="btn" onclick="ajLim('${esc(k.cuenta)}')">Guardar</button>${propio?`<button class="btn" title="Volver al límite general" onclick="aj({limiteCuenta:{cuenta:'${esc(k.cuenta)}',valor:null}})">General</button>`:''}</span></div>`; }).join('')}
+    <div class="row"><div class="tx"><b>Límite general</b><span>Para las cuentas que no tienen uno propio.</span></div>
+      <span style="display:flex;gap:6px;align-items:center">-$<input type="number" id="lim" min="0" step="5" value="${a.limite}" style="width:80px"><button class="btn" onclick="aj({limite:+$('lim').value})">Guardar</button></span></div>
+  </div>
   <div class="card">
     <div class="seg" style="display:flex;width:100%">${CFG.cuentas.map(k=>`<button style="flex:1;padding:9px" class="${k.cuenta===c.cuenta?'on':''}" onclick="cfgSetCta('${esc(k.cuenta)}')">${esc(String(k.modo).toUpperCase()==='REAL'?'Real':'Demo')} · ${esc(k.cuenta)}</button>`).join('')}</div>
     <div class="mute" style="font-size:13px;margin-top:10px;display:flex;align-items:center;gap:8px"><span class="dot ${c.hace>=0&&c.hace<=12?'g':'r'}"></span>${c.hace>=0&&c.hace<=12?'EA conectado · hace '+c.hace+' min':'Sin reporte hace '+c.hace+' min'} · Balance ${$$(c.balance)}</div>
