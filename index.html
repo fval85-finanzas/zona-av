@@ -196,7 +196,7 @@ nav.bot{display:none}
 
 <script>
 // ---------------------------------------------------------------- configuracion
-const APP_VER = '2.8.1';
+const APP_VER = '2.9.0';
 const API = 'https://qehuvzutrbqgppfifapp.supabase.co/functions/v1/web';
 const VERS = {ESCALERA:'1.9.4', ESCANER:'1.9.4', FIBO:'0.6', REPORTE:'0.3'};   // ultimas versiones publicadas
 const TABS = [['dash','Dashboard','◧'],['est','Estadísticas','▤'],['lab','Laboratorio','⚗'],['lic','Licencias','⚿'],['cfg','Configuración','☰'],['aj','Ajustes','⚙']];
@@ -930,6 +930,7 @@ const sinEsp = t => String(t||'').replace(/\s/g,'').toLowerCase();
 async function cfgCargar(forzar){
   if(!forzar && CFG && Date.now()-CFGT<60000) return;
   try{ const r=await api('config'); if(r&&r.ok){ CFG=r; CFGT=Date.now(); if(S.tab==='cfg') vCfg(); } else if(r) toast(r.msg||'Error'); }catch(e){}
+  alCargar();
 }
 function cfgCta(){
   if(!CFG) return null;
@@ -989,7 +990,76 @@ function vCfg(){
     <div class="pre">${PRE_FIJAS.map(x=>tarjetaPre(x,true)).join('')}${preU.map(x=>tarjetaPre({id:x.id,nombre:x.nombre,perfil:x.datos.perfil,riesgo:x.datos.riesgo},false)).join('')}
     ${preU.length?'':'<div class="prc" style="border-style:dashed"><div class="tx"><b>Mis configuraciones</b><span>Aún no guardaste ninguna. Se crean desde Editar.</span></div></div>'}</div>
     <div class="nota">Los cambios se aplican a la <b>siguiente</b> escalera, no a la abierta. El EA los recibe en unos 5 minutos (con el MT5 abierto y conectado).</div>
-  </div></div>`;
+  </div>
+  ${alTarjeta()}</div>`;
+}
+// ---------------------------------------------------------------- 2.9.0: avisos de conexion (Telegram, correo, celular)
+let AL=null, PUSHON=false;
+async function pushEstado(){
+  try{ if(!('serviceWorker' in navigator)||!('PushManager' in window)) return false;
+    const reg=await navigator.serviceWorker.ready; PUSHON=!!(await reg.pushManager.getSubscription()); }catch(e){ PUSHON=false; }
+}
+async function alCargar(){
+  try{ await pushEstado(); const r=await api('alertas'); if(r&&r.ok){ AL=r; if(S.tab==='cfg'&&CV==='inicio') vCfg(); } }catch(e){}
+}
+async function alSet(o){
+  try{ const r=await api('alertas_guardar',{o}); if(r.ok){ AL=r; vCfg(); } else toast(r.msg||'Error'); }catch(e){ if(e!=='sesión') toast('Error: '+e); }
+}
+function alMin(d){
+  const v=Math.max(3,Math.min(120,(AL.min||10)+d)); AL.min=v; vCfg();
+  clearTimeout(alMin._t); alMin._t=setTimeout(()=>alSet({min:v}),900);
+}
+function alCorreo(){
+  modal(`<h3>Correo para los avisos</h3><p class="mute" style="font-size:13px">Con la cuenta gratis de Resend solo llega al correo con el que se creó esa cuenta.</p>
+    <input id="alMail" type="email" value="${esc(AL.email||'')}" style="width:100%;margin:10px 0">
+    <div class="acts"><button class="btn" onclick="cerrar()">Cancelar</button><button class="btn p" onclick="const v=$('alMail').value;cerrar();alSet({email:v})">Guardar</button></div>`);
+}
+function b64Arr(s){ s=s.replace(/-/g,'+').replace(/_/g,'/'); while(s.length%4) s+='='; return Uint8Array.from(atob(s),c=>c.charCodeAt(0)); }
+async function alPush(on){
+  try{
+    if(!on){ const reg=await navigator.serviceWorker.ready; const sub=await reg.pushManager.getSubscription();
+      if(sub){ const ep=sub.endpoint; await sub.unsubscribe(); const r=await api('push_quitar',{endpoint:ep}); if(r.ok) AL=r; } PUSHON=false; vCfg(); return; }
+    if(!('Notification' in window)||!('PushManager' in window)||!('serviceWorker' in navigator)) return toast('Este navegador no permite notificaciones');
+    const perm=await Notification.requestPermission();
+    if(perm!=='granted') return toast('Permiso de notificaciones denegado. Actívalo en los ajustes del navegador.');
+    const reg=await navigator.serviceWorker.ready;
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:b64Arr(AL.vapid)});
+    const r=await api('push_sub',{sub:sub.toJSON()});
+    if(!r.ok) return toast(r.msg||'No se pudo activar');
+    AL=r; PUSHON=true; toast('Notificaciones activadas en este celular'); vCfg();
+  }catch(e){ if(e!=='sesión') toast('No se pudo: '+(e&&e.message||e)); }
+}
+async function alPrueba(){
+  toast('Enviando prueba…');
+  try{ const r=await api('alerta_prueba'); if(r.al) AL=r.al;
+    const c=r.canales||{}, ls=Object.keys(c).map(k=>(c[k].ok?'✓ ':'✗ ')+({telegram:'Telegram',correo:'Correo',push:'Celular'}[k]||k)+(c[k].ok?'':' ('+c[k].msg+')'));
+    modal(`<h3>Prueba enviada</h3>${ls.length?ls.map(x=>`<div style="padding:6px 0">${esc(x)}</div>`).join(''):'<div class="mute">Ningún canal está activado.</div>'}<div class="acts"><button class="btn p" onclick="cerrar();vCfg()">Listo</button></div>`);
+  }catch(e){ if(e!=='sesión') toast('Error: '+e); }
+}
+async function alChat(){
+  toast('Buscando tu chat…');
+  try{ const r=await api('alerta_chat'); if(r.al) AL=r.al; toast(r.ok?'Telegram conectado: '+(r.nombre||''):(r.msg||'No se pudo')); vCfg(); }catch(e){ if(e!=='sesión') toast('Error: '+e); }
+}
+function alFila(t,sub,on,fn,extra){
+  return `<div class="row"><div class="tx"><b>${t}</b><span>${sub}</span>${extra||''}</div><button class="sw ${on?'on':''}" aria-label="${esc(t)}" onclick="${fn}"></button></div>`;
+}
+function alTarjeta(){
+  if(!AL){ setTimeout(()=>alCargar(),0); return `<div class="card"><h3>Avisos de conexión</h3><div class="empty">Cargando…</div></div>`; }
+  const k=AL.canales||{}, ctas=(CFG&&CFG.cuentas)||[];
+  const tgOk=k.token&&k.chat;
+  return `<div class="card"><h3>Avisos de conexión</h3>
+    ${alFila('Avisar si una cuenta deja de reportar','Internet caído, MT5 cerrado o PC apagado. Un aviso por caída y otro cuando vuelve.',AL.on,`alSet({on:${!AL.on}})`)}
+    ${AL.on?`
+    ${stp('Avisar después de', AL.min+' min', 'alMin(-5)', 'alMin(5)')}
+    ${alFila('Telegram', tgOk?'Conectado ✓':(k.token?'Falta conectar tu chat: escríbele "hola" al bot y toca Conectar.':'Falta el secreto TG_TOKEN en Supabase.'), AL.tg&&tgOk, tgOk?`alSet({tg:${!AL.tg}})`:'alChat()', tgOk?'':`<button class="btn p" style="margin-top:6px;font-size:12px;padding:5px 10px" onclick="alChat()">Conectar</button>`)}
+    ${alFila('Correo', esc(AL.email||'sin correo')+(k.resend?'':' · falta RESEND_KEY'), AL.mail&&k.resend, k.resend?`alSet({mail:${!AL.mail}})`:'toast(\'Falta el secreto RESEND_KEY en Supabase\')', `<button class="btn" style="margin-top:6px;font-size:12px;padding:5px 10px" onclick="alCorreo()">Cambiar correo</button>`)}
+    ${alFila('Notificación del celular', (AL.celulares||0)+' celular(es) activado(s) · este: '+(PUSHON?'activado ✓':'no activado'), AL.push, `alSet({push:${!AL.push}})`,
+       `<button class="btn ${PUSHON?'d':'p'}" style="margin-top:6px;font-size:12px;padding:5px 10px" onclick="alPush(${!PUSHON})">${PUSHON?'Desactivar en este celular':'Activar en este celular'}</button>`)}
+    <div style="margin-top:10px"><b style="font-size:14px">Cuentas a vigilar</b></div>
+    ${ctas.map(c=>alFila((String(c.modo).toUpperCase()==='REAL'?'Real':'Demo')+' · '+esc(c.cuenta),'Avisar si deja de reportar', AL.cuentas[c.cuenta]!==false, `alSet({cuenta:{cuenta:'${esc(c.cuenta)}',valor:${AL.cuentas[c.cuenta]===false}}})`)).join('')}
+    <button class="btn p" style="width:100%;padding:12px;margin-top:12px" onclick="alPrueba()">Enviar prueba</button>`:''}
+  </div>`;
 }
 function cfgSetCta(k){ S.cfgCta=k; guardar(); CV='inicio'; CE=null; vCfg(); }
 function cfgEditar(pre){
